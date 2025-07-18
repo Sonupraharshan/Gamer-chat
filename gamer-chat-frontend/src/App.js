@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Friends from './pages/Friends';
 import Lobby from './pages/Lobby';
+import Home from './pages/Home';
+
 
 function App() {
   return (
@@ -15,7 +17,8 @@ function App() {
           <Link to="/">Login</Link> | 
           <Link to="/register">Register</Link> | 
           <Link to="/friends">Friends</Link> | 
-          <Link to="/lobby">Lobby</Link>
+          <Link to="/lobby">Lobby</Link> |
+          <Link to="/home">Home</Link>
         </nav>
 
         <Routes>
@@ -23,6 +26,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/friends" element={<Friends />} />
           <Route path="/lobby" element={<Lobby />} />
+          <Route path="/home" element={<Home />} />
         </Routes>
       </div>
     </Router>
