@@ -9,10 +9,14 @@ module.exports = {
     clean: true,
   },
   devServer: {
-    static: './dist',
+    static: {
+      directory: path.join(__dirname, 'public'), // or 'public'
+    },
+    historyApiFallback: true, // 👈 tells dev server to serve index.html for any route
     port: 3000,
     open: true,
   },
+  
   plugins: [
     new HtmlWebpackPlugin({
       template: './public/index.html',

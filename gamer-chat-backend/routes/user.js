@@ -15,35 +15,32 @@ module.exports = router;
 
 const User = require('../models/User');
 
-// Send Friend Request → POST /api/user/request/:id
-router.post('/request/:id', verifyToken, async (req, res) => {
+// Send Friend Request by Username → POST /api/user/request-by-username/:username
+router.post('/request-by-username/:username', verifyToken, async (req, res) => {
   try {
-    const fromUserId = req.user.id;      // logged-in user
-    const toUserId = req.params.id;      // user they want to add
-
-    if (fromUserId === toUserId) {
-      return res.status(400).json({ message: "You can't send request to yourself" });
-    }
+    const fromUserId = req.user.id;
+    const toUsername = req.params.username;
 
     const fromUser = await User.findById(fromUserId);
-    const toUser = await User.findById(toUserId);
+    const toUser = await User.findOne({ username: toUsername });
 
     if (!toUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Already friends?
-    if (fromUser.friends.includes(toUserId)) {
+    if (fromUser._id.equals(toUser._id)) {
+      return res.status(400).json({ message: "You can't send request to yourself" });
+    }
+
+    if (fromUser.friends.includes(toUser._id)) {
       return res.status(400).json({ message: 'Already friends' });
     }
 
-    // Already sent?
-    if (toUser.friendRequests.includes(fromUserId)) {
+    if (toUser.friendRequests.includes(fromUser._id)) {
       return res.status(400).json({ message: 'Request already sent' });
     }
 
-    // Send request
-    toUser.friendRequests.push(fromUserId);
+    toUser.friendRequests.push(fromUser._id);
     await toUser.save();
 
     res.status(200).json({ message: 'Friend request sent!' });
@@ -52,6 +49,7 @@ router.post('/request/:id', verifyToken, async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
+
 
 
 // Accept Friend Request → POST /api/user/accept/:id
@@ -111,3 +109,4 @@ router.get('/friends', verifyToken, async (req, res) => {
     }
   });
   
+
