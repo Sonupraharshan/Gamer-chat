@@ -6,19 +6,21 @@ const Friends = () => {
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [requests, setRequests] = useState([]);
   const chatBoxRef = useRef(null);
 
   const token = localStorage.getItem('token');
   const currentUserId = token ? jwtDecode(token).id : null;
 
-  // Fetch friends on mount
   useEffect(() => {
     const fetchFriends = async () => {
       try {
         const res = await fetch('http://localhost:5000/api/user/friends', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         setFriends(data.friends || []);
@@ -29,17 +31,14 @@ const Friends = () => {
     fetchFriends();
   }, [token]);
 
-  // Fetch messages when selectedFriendId changes
   const fetchMessages = async (friendId = selectedFriendId) => {
     if (!friendId) return;
     try {
       const res = await fetch(`http://localhost:5000/api/message/${friendId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      setMessages(data.chat || []);
+      setMessages(Array.isArray(data.chat) ? data.chat : []);
     } catch (err) {
       console.error('Error fetching messages', err);
     }
@@ -49,26 +48,21 @@ const Friends = () => {
     fetchMessages();
   }, [selectedFriendId]);
 
-  // Auto-refresh chat every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       if (selectedFriendId) fetchMessages();
     }, 5000);
-
     return () => clearInterval(interval);
   }, [selectedFriendId]);
 
-  // Scroll to bottom when messages update
   useEffect(() => {
     if (chatBoxRef.current) {
       chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // Send message
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedFriendId) return;
-
     try {
       const res = await fetch(`http://localhost:5000/api/message/${selectedFriendId}`, {
         method: 'POST',
@@ -95,6 +89,61 @@ const Friends = () => {
     }
   };
 
+  const handleSearch = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/user/search?username=${searchTerm}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setSearchResults(data.users || []);
+    } catch (err) {
+      console.error('Search failed', err);
+    }
+  };
+
+  const handleSendRequest = async (username) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/user/request-by-username/${username}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      alert(data.message);
+      setSearchResults([]);
+      setSearchTerm('');
+      setShowSearchModal(false);
+    } catch (err) {
+      console.error('Request failed', err);
+    }
+  };
+
+  const handleViewRequests = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/user/requests', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setRequests(data.requests || []);
+      setShowRequestsModal(true);
+    } catch (err) {
+      console.error('View requests failed', err);
+    }
+  };
+
+  const handleAcceptRequest = async (senderId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/user/accept/${senderId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      alert(data.message);
+      setRequests((prev) => prev.filter((r) => r._id !== senderId));
+    } catch (err) {
+      console.error('Accept failed', err);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
       {/* Sidebar */}
@@ -104,11 +153,7 @@ const Friends = () => {
           {friends.map((friend) => (
             <div
               key={friend._id}
-              onClick={() => {
-                if (friend._id !== selectedFriendId) {
-                  setSelectedFriendId(friend._id);
-                }
-              }}
+              onClick={() => setSelectedFriendId(friend._id)}
               style={{
                 padding: '8px',
                 cursor: 'pointer',
@@ -123,31 +168,14 @@ const Friends = () => {
         {/* Fixed Buttons */}
         <div style={{ position: 'absolute', bottom: 10, left: 10, right: 10 }}>
           <button
-            style={{
-              width: '100%',
-              padding: '10px',
-              marginBottom: '10px',
-              backgroundColor: '#007bff',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-            onClick={() => alert('Send Request clicked')}
+            style={buttonStyle('#007bff')}
+            onClick={() => setShowSearchModal(true)}
           >
             Send Request
           </button>
           <button
-            style={{
-              width: '100%',
-              padding: '10px',
-              backgroundColor: '#28a745',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-            onClick={() => alert('View Requests clicked')}
+            style={buttonStyle('#28a745')}
+            onClick={handleViewRequests}
           >
             View Requests
           </button>
@@ -215,8 +243,76 @@ const Friends = () => {
           </div>
         )}
       </div>
+
+      {/* Search Modal */}
+      {showSearchModal && (
+        <Modal onClose={() => setShowSearchModal(false)} title="Send Friend Request">
+          <input
+            type="text"
+            placeholder="Enter username"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ width: '100%', padding: '10px', marginBottom: '10px' }}
+          />
+          <button onClick={handleSearch} style={{ ...buttonStyle('#007bff'), marginBottom: '10px' }}>
+            Search
+          </button>
+          {searchResults.map((user) => (
+            <div key={user._id} style={{ padding: '8px', borderBottom: '1px solid #ddd', cursor: 'pointer' }}
+              onClick={() => handleSendRequest(user.username)}>
+              {user.username}
+            </div>
+          ))}
+        </Modal>
+      )}
+
+      {/* Requests Modal */}
+      {showRequestsModal && (
+        <Modal onClose={() => setShowRequestsModal(false)} title="Friend Requests">
+          {requests.length === 0 ? (
+            <p>No incoming requests</p>
+          ) : (
+            requests.map((req) => (
+              <div key={req._id} style={{ marginBottom: '10px' }}>
+                <strong>{req.username}</strong>
+                <button
+                  onClick={() => handleAcceptRequest(req._id)}
+                  style={{ ...buttonStyle('#28a745'), marginLeft: '10px' }}
+                >
+                  Accept
+                </button>
+              </div>
+            ))
+          )}
+        </Modal>
+      )}
     </div>
   );
 };
+
+// Reusable Modal Component
+const Modal = ({ onClose, title, children }) => (
+  <div style={{
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999
+  }}>
+    <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', width: '400px' }}>
+      <h3 style={{ marginTop: 0 }}>{title}</h3>
+      <div>{children}</div>
+      <button onClick={onClose} style={{ ...buttonStyle('#dc3545'), marginTop: '15px' }}>Close</button>
+    </div>
+  </div>
+);
+
+// Reusable button style
+const buttonStyle = (bg) => ({
+  width: '100%',
+  padding: '10px',
+  backgroundColor: bg,
+  color: '#fff',
+  border: 'none',
+  borderRadius: '4px',
+  cursor: 'pointer',
+});
 
 export default Friends;
