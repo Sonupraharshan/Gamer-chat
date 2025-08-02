@@ -139,6 +139,7 @@ const Friends = () => {
       const data = await res.json();
       alert(data.message);
       setRequests((prev) => prev.filter((r) => r._id !== senderId));
+      window.location.reload();
     } catch (err) {
       console.error('Accept failed', err);
     }

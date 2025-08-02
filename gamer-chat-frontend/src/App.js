@@ -1,46 +1,41 @@
 // src/App.js
 import React, { useContext } from 'react';
 import { AuthContext } from './context/AuthContext';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Friends from './pages/Friends';
-import Lobby from './pages/Lobby';
+import Home from './pages/Home';
 
-const Home = () => {
-  const { user, logout } = useContext(AuthContext);
-  const navigate = useNavigate();
 
-  return (
-    <div>
-      <h1>Welcome to Gamer Chat</h1>
+// ✅ Wrapper for protected routes
+const ProtectedRoute = ({ children }) => {
+  const { user } = useContext(AuthContext);
+  return user ? children : <Navigate to="/login" replace />;
+};
 
-      {user ? (
-        <>
-          <p>Logged in as: {user.username}</p>
-          <button onClick={() => navigate('/friends')}>Friends</button>
-          <button onClick={() => navigate('/lobby')}>Lobby</button>
-          <button onClick={logout}>Logout</button>
-        </>
-      ) : (
-        <>
-          <button onClick={() => navigate('/register')}>Register</button>
-          <button onClick={() => navigate('/login')}>Login</button>
-        </>
-      )}
-    </div>
-  );
+// ✅ Wrapper for public-only routes like login/register
+const PublicRoute = ({ children }) => {
+  const { user } = useContext(AuthContext);
+  return !user ? children : <Navigate to="/" replace />;
 };
 
 function App() {
   return (
     <Router>
       <Routes>
+        {/* Protected Routes */}
         <Route path="/" element={<Home />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/friends" element={<Friends />} />
-        <Route path="/lobby" element={<Lobby />} />
+        <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+
+        {/* Public Routes */}
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       </Routes>
     </Router>
   );
