@@ -122,3 +122,41 @@ router.get('/search', verifyToken, async (req, res) => {
   }
 });
 
+// ========== NOTIFICATIONS ==========
+
+// Get all notifications for the current user
+router.get('/notifications', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .populate('friendRequests', 'username');
+    
+    // Get pending friend requests as notifications
+    const friendRequestNotifications = user.friendRequests.map(req => ({
+      _id: `fr_${req._id}`,
+      type: 'friend_request',
+      sender: req,
+      message: `${req.username} sent you a friend request`,
+      read: false,
+      createdAt: new Date()
+    }));
+
+    res.json({ 
+      notifications: friendRequestNotifications,
+      unreadCount: friendRequestNotifications.length
+    });
+  } catch (err) {
+    console.error('Get notifications error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get notification count only (for badge)
+router.get('/notifications/count', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const unreadCount = user.friendRequests?.length || 0;
+    res.json({ unreadCount });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});

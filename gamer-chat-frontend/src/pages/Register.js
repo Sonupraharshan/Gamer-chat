@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Register() {
   const [username, setUsername] = useState('');
@@ -45,30 +45,101 @@ function Register() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Register</h2>
-      <input
-        value={username}
-        onChange={e => setUsername(e.target.value)}
-        placeholder="Username"
-        required
-      />
-      <input
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        placeholder="Email"
-        required
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        placeholder="Password"
-        required
-      />
-      <button type="submit">Register</button>
-    </form>
+    <div style={styles.container}>
+      <div style={styles.formCard}>
+        <h2 style={styles.title}>🎮 Join Gamer Chat</h2>
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <input
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            placeholder="Username"
+            required
+            style={styles.input}
+          />
+          <input
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="Email"
+            required
+            type="email"
+            style={styles.input}
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="Password"
+            required
+            style={styles.input}
+          />
+          <button type="submit" style={styles.button}>Register</button>
+        </form>
+        <p style={styles.linkText}>
+          Already have an account? <Link to="/login" style={styles.link}>Login here</Link>
+        </p>
+      </div>
+    </div>
   );
 }
+
+const styles = {
+  container: {
+    height: '100vh',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#3d3a3aff'
+  },
+  formCard: {
+    backgroundColor: '#272424ff',
+    padding: '40px',
+    borderRadius: '12px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+    width: '400px',
+    maxWidth: '90%'
+  },
+  title: {
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: '30px'
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '15px'
+  },
+  input: {
+    padding: '12px 15px',
+    fontSize: '14px',
+    borderRadius: '6px',
+    border: '1px solid #555',
+    backgroundColor: '#3d3a3aff',
+    color: '#fff',
+    outline: 'none'
+  },
+  button: {
+    padding: '12px',
+    fontSize: '16px',
+    fontWeight: '500',
+    borderRadius: '6px',
+    border: 'none',
+    backgroundColor: '#556158ff',
+    color: '#fff',
+    cursor: 'pointer',
+    marginTop: '10px',
+    transition: 'background-color 0.2s'
+  },
+  linkText: {
+    textAlign: 'center',
+    marginTop: '20px',
+    color: '#ccc',
+    fontSize: '14px'
+  },
+  link: {
+    color: '#556158ff',
+    textDecoration: 'none',
+    fontWeight: '500'
+  }
+};
 
 export default Register;

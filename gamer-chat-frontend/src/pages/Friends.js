@@ -146,19 +146,18 @@ const Friends = () => {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
+    <div style={styles.container}>
       {/* Sidebar */}
-      <div style={{ width: '25%', borderRight: '1px solid #ccc', padding: '10px', position: 'relative' }}>
-        <h3>Friends</h3>
-        <div style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 150px)', marginBottom: '60px' }}>
+      <div style={styles.sidebar}>
+        <h3 style={styles.sidebarTitle}>Friends</h3>
+        <div style={styles.friendsList}>
           {friends.map((friend) => (
             <div
               key={friend._id}
               onClick={() => setSelectedFriendId(friend._id)}
               style={{
-                padding: '8px',
-                cursor: 'pointer',
-                backgroundColor: friend._id === selectedFriendId ? '#eee' : 'transparent',
+                ...styles.friendItem,
+                backgroundColor: friend._id === selectedFriendId ? '#575050ff' : 'transparent',
               }}
             >
               {friend.username}
@@ -167,15 +166,15 @@ const Friends = () => {
         </div>
 
         {/* Fixed Buttons */}
-        <div style={{ position: 'absolute', bottom: 10, left: 10, right: 10 }}>
+        <div style={styles.sidebarButtons}>
           <button
-            style={buttonStyle('#007bff')}
+            style={styles.sendRequestBtn}
             onClick={() => setShowSearchModal(true)}
           >
             Send Request
           </button>
           <button
-            style={buttonStyle('#28a745')}
+            style={styles.viewRequestsBtn}
             onClick={handleViewRequests}
           >
             View Requests
@@ -184,21 +183,12 @@ const Friends = () => {
       </div>
 
       {/* Chat Panel */}
-      <div style={{ width: '75%', padding: '10px' }}>
+      <div style={styles.chatPanel}>
         {selectedFriendId ? (
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div
-              ref={chatBoxRef}
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-                border: '1px solid #ccc',
-                padding: '10px',
-                backgroundColor: '#f9f9f9',
-              }}
-            >
+          <div style={styles.chatContainer}>
+            <div ref={chatBoxRef} style={styles.messagesContainer}>
               {messages.length === 0 ? (
-                <p>No messages yet</p>
+                <p style={styles.noMessages}>No messages yet</p>
               ) : (
                 messages.map((msg) => (
                   <div
@@ -212,10 +202,11 @@ const Friends = () => {
                       style={{
                         display: 'inline-block',
                         padding: '8px 12px',
-                        backgroundColor: msg.sender === currentUserId ? '#d1e7ff' : '#e0e0e0',
+                        backgroundColor: msg.sender === currentUserId ? '#556158ff' : '#575050ff',
                         borderRadius: '8px',
                         maxWidth: '60%',
                         wordWrap: 'break-word',
+                        color: '#fff',
                       }}
                     >
                       {msg.content}
@@ -225,21 +216,22 @@ const Friends = () => {
               )}
             </div>
 
-            <div style={{ display: 'flex', marginTop: '10px' }}>
+            <div style={styles.inputContainer}>
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type your message..."
-                style={{ flex: 1, padding: '10px' }}
+                style={styles.input}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               />
-              <button onClick={handleSendMessage} style={{ padding: '10px 20px' }}>
+              <button onClick={handleSendMessage} style={styles.sendBtn}>
                 Send
               </button>
             </div>
           </div>
         ) : (
-          <div style={{ textAlign: 'center', marginTop: '40px', color: '#777' }}>
+          <div style={styles.placeholder}>
             👈 Select a friend to start chatting
           </div>
         )}
@@ -253,13 +245,13 @@ const Friends = () => {
             placeholder="Enter username"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '100%', padding: '10px', marginBottom: '10px' }}
+            style={styles.modalInput}
           />
-          <button onClick={handleSearch} style={{ ...buttonStyle('#007bff'), marginBottom: '10px' }}>
+          <button onClick={handleSearch} style={styles.searchBtn}>
             Search
           </button>
           {searchResults.map((user) => (
-            <div key={user._id} style={{ padding: '8px', borderBottom: '1px solid #ddd', cursor: 'pointer' }}
+            <div key={user._id} style={styles.searchResult}
               onClick={() => handleSendRequest(user.username)}>
               {user.username}
             </div>
@@ -271,14 +263,14 @@ const Friends = () => {
       {showRequestsModal && (
         <Modal onClose={() => setShowRequestsModal(false)} title="Friend Requests">
           {requests.length === 0 ? (
-            <p>No incoming requests</p>
+            <p style={{ color: '#ccc' }}>No incoming requests</p>
           ) : (
             requests.map((req) => (
-              <div key={req._id} style={{ marginBottom: '10px' }}>
-                <strong>{req.username}</strong>
+              <div key={req._id} style={styles.requestItem}>
+                <strong style={{ color: '#fff' }}>{req.username}</strong>
                 <button
                   onClick={() => handleAcceptRequest(req._id)}
-                  style={{ ...buttonStyle('#28a745'), marginLeft: '10px' }}
+                  style={styles.acceptBtn}
                 >
                   Accept
                 </button>
@@ -293,27 +285,199 @@ const Friends = () => {
 
 // Reusable Modal Component
 const Modal = ({ onClose, title, children }) => (
-  <div style={{
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999
-  }}>
-    <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', width: '400px' }}>
-      <h3 style={{ marginTop: 0 }}>{title}</h3>
+  <div style={styles.modalOverlay}>
+    <div style={styles.modalContent}>
+      <h3 style={styles.modalTitle}>{title}</h3>
       <div>{children}</div>
-      <button onClick={onClose} style={{ ...buttonStyle('#dc3545'), marginTop: '15px' }}>Close</button>
+      <button onClick={onClose} style={styles.closeBtn}>Close</button>
     </div>
   </div>
 );
 
-// Reusable button style
-const buttonStyle = (bg) => ({
-  width: '100%',
-  padding: '10px',
-  backgroundColor: bg,
-  color: '#fff',
-  border: 'none',
-  borderRadius: '4px',
-  cursor: 'pointer',
-});
+const styles = {
+  container: {
+    display: 'flex',
+    height: '100vh',
+    backgroundColor: '#3d3a3aff'
+  },
+  sidebar: {
+    width: '25%',
+    borderRight: '1px solid #555',
+    padding: '10px',
+    position: 'relative',
+    backgroundColor: '#272424ff',
+    color: '#fff'
+  },
+  sidebarTitle: {
+    color: '#fff',
+    marginTop: 0
+  },
+  friendsList: {
+    overflowY: 'auto',
+    maxHeight: 'calc(100vh - 150px)',
+    marginBottom: '60px'
+  },
+  friendItem: {
+    padding: '12px',
+    cursor: 'pointer',
+    borderRadius: '5px',
+    marginBottom: '5px',
+    transition: 'background-color 0.2s',
+    color: '#fff'
+  },
+  sidebarButtons: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    right: 10
+  },
+  sendRequestBtn: {
+    width: '100%',
+    padding: '10px',
+    backgroundColor: '#556158ff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    marginBottom: '8px',
+    fontSize: '14px'
+  },
+  viewRequestsBtn: {
+    width: '100%',
+    padding: '10px',
+    backgroundColor: '#556158ff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px'
+  },
+  chatPanel: {
+    width: '75%',
+    padding: '10px',
+    backgroundColor: '#3d3a3aff'
+  },
+  chatContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%'
+  },
+  messagesContainer: {
+    flex: 1,
+    overflowY: 'auto',
+    border: '1px solid #555',
+    padding: '15px',
+    backgroundColor: '#272424ff',
+    borderRadius: '8px'
+  },
+  noMessages: {
+    color: '#999',
+    textAlign: 'center'
+  },
+  inputContainer: {
+    display: 'flex',
+    marginTop: '10px',
+    gap: '10px'
+  },
+  input: {
+    flex: 1,
+    padding: '12px',
+    backgroundColor: '#272424ff',
+    border: '1px solid #555',
+    borderRadius: '5px',
+    color: '#fff',
+    fontSize: '14px'
+  },
+  sendBtn: {
+    padding: '12px 25px',
+    backgroundColor: '#556158ff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontSize: '14px'
+  },
+  placeholder: {
+    textAlign: 'center',
+    marginTop: '40px',
+    color: '#999',
+    fontSize: '18px'
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999
+  },
+  modalContent: {
+    backgroundColor: '#272424ff',
+    padding: '25px',
+    borderRadius: '10px',
+    width: '400px',
+    border: '1px solid #555'
+  },
+  modalTitle: {
+    marginTop: 0,
+    color: '#fff'
+  },
+  modalInput: {
+    width: '100%',
+    padding: '10px',
+    marginBottom: '10px',
+    backgroundColor: '#3d3a3aff',
+    border: '1px solid #555',
+    borderRadius: '5px',
+    color: '#fff',
+    boxSizing: 'border-box'
+  },
+  searchBtn: {
+    width: '100%',
+    padding: '10px',
+    backgroundColor: '#556158ff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    marginBottom: '10px'
+  },
+  searchResult: {
+    padding: '10px',
+    borderBottom: '1px solid #555',
+    cursor: 'pointer',
+    color: '#fff',
+    transition: 'background-color 0.2s'
+  },
+  requestItem: {
+    marginBottom: '10px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  acceptBtn: {
+    padding: '8px 15px',
+    backgroundColor: '#556158ff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer'
+  },
+  closeBtn: {
+    width: '100%',
+    padding: '10px',
+    backgroundColor: '#dc3545',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    marginTop: '15px'
+  }
+};
 
 export default Friends;
+

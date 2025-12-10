@@ -1,6 +1,23 @@
 import axios from 'axios';
 
-export default axios.create({
+const instance = axios.create({
   baseURL: 'http://localhost:5000',
-  withCredentials: true, // use this if your backend sends cookies
+  withCredentials: true,
 });
+
+// Add request interceptor to attach token
+instance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+export default instance;
+
