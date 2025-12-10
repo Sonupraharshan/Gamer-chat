@@ -233,16 +233,3 @@ Gamer-chat/
 | `group-message` | Server → Client | Receive a message |
 | `member-joined` | Server → Client | User joined group |
 | `member-left` | Server → Client | User left group |
-
-## 👨‍💻 Author
-
-**Sonu Praharshan**
-- GitHub: [@Sonupraharshan](https://github.com/Sonupraharshan)
-
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
----
-
-<p align="center">Made with ❤️ for Gamers</p>
