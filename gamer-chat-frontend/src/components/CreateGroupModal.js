@@ -89,7 +89,7 @@ const styles = {
     zIndex: 1000
   },
   modal: {
-    backgroundColor: '#fff',
+    backgroundColor: '#556158ff',
     padding: '30px',
     borderRadius: '10px',
     width: '90%',

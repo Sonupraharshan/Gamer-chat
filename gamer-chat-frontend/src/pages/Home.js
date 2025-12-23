@@ -1,5 +1,4 @@
-// src/pages/Home.js
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import CreateGroupModal from '../components/CreateGroupModal';
@@ -7,14 +6,17 @@ import JoinGroupModal from '../components/JoinGroupModal';
 import GroupList from '../components/GroupList';
 import GroupChat from '../components/GroupChat';
 import NotificationBell from '../components/NotificationBell';
+import { SocketContext } from '../context/SocketContext';
 
 function Home() {
   const { user, logout } = useContext(AuthContext);
+  const { socket, gameActivityAlerts } = useContext(SocketContext);
   const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [gameStatus, setGameStatus] = useState('');
 
   const handleCreateSuccess = (newGroup) => {
     setRefreshKey((prev) => prev + 1);
@@ -39,17 +41,48 @@ function Home() {
     setRefreshKey((prev) => prev + 1);
   };
 
+  const handleSetGameStatus = (e) => {
+    if (e.key === 'Enter') {
+      socket.emit('set-game-status', gameStatus);
+    }
+  };
+
+  useEffect(() => {
+    if (socket) {
+      socket.on('game-channel-suggested', ({ groupId, gameName }) => {
+        if (window.confirm(`Multiple people are playing ${gameName}! Join the game-specific lobby?`)) {
+          handleJoinSuccess({ _id: groupId });
+        }
+      });
+
+      return () => {
+        socket.off('game-channel-suggested');
+      };
+    }
+  }, [socket]);
+
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="animate-in">
       {/* Header */}
-      <div style={styles.header}>
-        <h1 style={styles.title}>🎮 Gamer Chat</h1>
+      <div style={styles.header} className="glass-panel">
+        <h1 style={styles.title} className="glow-text">🎮 Gamer Chat </h1>
         
         {user && (
           <div style={styles.userSection}>
+            <div style={styles.gameStatusSection}>
+              <input 
+                type="text" 
+                placeholder="🎮 What are you playing?" 
+                value={gameStatus}
+                onChange={(e) => setGameStatus(e.target.value)}
+                onKeyDown={handleSetGameStatus}
+                style={styles.gameInput}
+                className="glass-panel"
+              />
+            </div>
             <span style={styles.username}>👤 {user.username}</span>
             <NotificationBell />
-            <button onClick={() => navigate('/friends')} style={styles.navBtn}>
+            <button onClick={() => navigate('/friends')} style={styles.navBtn} className="premium-btn">
               Friends
             </button>
             <button
@@ -63,6 +96,25 @@ function Home() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Live Activity Banners */}
+      <div style={styles.activityAlerts}>
+        {gameActivityAlerts.map((alert, idx) => (
+          <div key={idx} style={styles.alertBanner} className="animate-in glass-panel">
+            <span style={styles.alertIcon}>🔥</span>
+            <div>
+              <span style={styles.alertText}><b>{alert.username}</b> is playing <b>{alert.gameName}</b>!</span>
+              <div style={styles.alertSubText}>Join the lobby to play together.</div>
+            </div>
+            <button 
+              onClick={() => handleJoinSuccess({ _id: alert.groupId })}
+              style={styles.alertJoinBtn}
+            >
+              Join Lobby
+            </button>
+          </div>
+        ))}
       </div>
 
       {user ? (
@@ -143,50 +195,68 @@ function Home() {
 
 const styles = {
   container: {
-    height: '100vh',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: '#3d3a3aff'
+    height: '100vh',
+    width: '100vw',
+    backgroundColor: 'var(--bg-primary)',
+    color: 'var(--text-main)',
+    fontFamily: "'Inter', system-ui, sans-serif"
   },
   header: {
-    backgroundColor: '#020305ff',
-    color: '#fff',
-    padding: '15px 30px',
+    height: '70px',
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    justifyContent: 'space-between',
+    padding: '0 30px',
+    background: 'linear-gradient(180deg, rgba(125, 95, 255, 0.1) 0%, transparent 100%)',
+    zIndex: 10
   },
   title: {
-    margin: 0,
-    fontSize: '24px'
+    fontSize: '24px',
+    fontWeight: '800',
+    letterSpacing: '-0.5px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  ultraTag: {
+    fontSize: '10px',
+    background: 'var(--accent-secondary)',
+    color: '#000',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    fontWeight: 'bold',
+    verticalAlign: 'middle'
+  },
+  gameInput: {
+    padding: '8px 16px',
+    borderRadius: '20px',
+    border: 'none',
+    width: '250px',
+    color: '#fff',
+    fontSize: '13px',
+    outline: 'none',
+    transition: 'var(--transition-smooth)'
   },
   userSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '15px'
+    gap: '20px'
   },
   username: {
-    fontSize: '14px',
-    fontWeight: '500'
+    fontWeight: '600',
+    fontSize: '14px'
   },
   navBtn: {
     padding: '8px 16px',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    backgroundColor: '#575050ff',
-    color: '#fff',
-    fontSize: '13px',
-    fontWeight: '500'
+    fontSize: '13px'
   },
   logoutBtn: {
-    padding: '8px 16px',
+    backgroundColor: 'transparent',
+    color: 'var(--text-muted)',
     border: 'none',
-    borderRadius: '5px',
     cursor: 'pointer',
-    backgroundColor: '#556158ff',
-    color: '#fff',
     fontSize: '13px',
     fontWeight: '500'
   },
@@ -202,6 +272,18 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden'
+  },
+  gameStatusSection: {
+    marginRight: '15px'
+  },
+  gameInput: {
+    backgroundColor: '#3d3a3aff',
+    border: '1px solid #555',
+    borderRadius: '4px',
+    padding: '6px 10px',
+    color: '#fff',
+    fontSize: '12px',
+    width: '200px'
   },
   actionButtons: {
     padding: '15px',
@@ -234,11 +316,9 @@ const styles = {
   rightPanel: {
     flex: 1,
     display: 'flex',
-    alignItems: 'stretch', // Stretches child vertically
-    justifyContent: 'flex-start', // Aligns child to start (or center if you prefer)
+    flexDirection: 'column',
     overflow: 'hidden',
-    width: '100%',
-    backgroundColor: '#3d3a3aff' // Ensure background matches
+    backgroundColor: 'var(--bg-primary)'
   },
   placeholder: {
     textAlign: 'center',
@@ -277,6 +357,48 @@ const styles = {
     color: '#fff',
     fontSize: '16px',
     fontWeight: '500'
+  },
+  activityAlerts: {
+    position: 'fixed',
+    top: '80px',
+    right: '30px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    zIndex: 1000,
+    width: '320px'
+  },
+  alertBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 16px',
+    backgroundColor: 'rgba(125, 95, 255, 0.15)',
+    border: '1px solid var(--accent-primary)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+    color: '#fff'
+  },
+  alertIcon: {
+    fontSize: '24px'
+  },
+  alertText: {
+    fontSize: '13px',
+    display: 'block'
+  },
+  alertSubText: {
+    fontSize: '11px',
+    opacity: 0.7
+  },
+  alertJoinBtn: {
+    marginLeft: 'auto',
+    backgroundColor: 'var(--accent-secondary)',
+    color: '#000',
+    border: 'none',
+    padding: '4px 10px',
+    borderRadius: '4px',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    cursor: 'pointer'
   }
 };
 

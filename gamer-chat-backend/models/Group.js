@@ -31,6 +31,10 @@ const GroupSchema = new mongoose.Schema({
     required: true,
     unique: true,
     index: true
+  },
+  isGameChannel: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 

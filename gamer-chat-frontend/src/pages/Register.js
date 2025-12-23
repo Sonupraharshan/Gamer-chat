@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { API_URL } from '../config';
 
 function Register() {
   const [username, setUsername] = useState('');
@@ -13,7 +14,7 @@ function Register() {
     e.preventDefault();
 
     // Step 1: Register the user
-    const res = await fetch('http://localhost:5000/api/auth/register', {
+    const res = await fetch(`${API_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password }),
@@ -27,7 +28,7 @@ function Register() {
     }
 
     // Step 2: Auto-login using email/password
-    const loginRes = await fetch('http://localhost:5000/api/auth/login', {
+    const loginRes = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -36,8 +37,7 @@ function Register() {
     const loginData = await loginRes.json();
 
     if (loginRes.ok) {
-      localStorage.setItem('token', data.token);
-      login(loginData); // save user globally
+      login(loginData); // loginData has { user, token }
       navigate('/'); // redirect to homepage
     } else {
       alert(loginData.message || 'Auto-login failed. Please log in manually.');

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import io from 'socket.io-client';
 import { AuthContext } from './AuthContext';
+import { API_URL } from '../config';
 
 export const SocketContext = createContext();
 
@@ -8,10 +9,12 @@ export const SocketProvider = ({ children }) => {
   const { user } = useContext(AuthContext);
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [peerGameStatuses, setPeerGameStatuses] = useState({});
+  const [gameActivityAlerts, setGameActivityAlerts] = useState([]);
 
   useEffect(() => {
     if (user && user.token) {
-      const socketUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const socketUrl = API_URL;
       console.log('🔌 Connecting to socket at:', socketUrl);
       
       // Connect to Socket.io server
@@ -36,6 +39,22 @@ export const SocketProvider = ({ children }) => {
         console.error('Socket error:', error);
       });
 
+      newSocket.on('member-status-changed', (data) => {
+        const { userId, gameStatus } = data;
+        setPeerGameStatuses(prev => ({
+          ...prev,
+          [userId]: gameStatus
+        }));
+      });
+
+      newSocket.on('game-activity-alert', (alert) => {
+        setGameActivityAlerts(prev => [alert, ...prev].slice(0, 5));
+        // Auto-remove alert after 10 seconds
+        setTimeout(() => {
+          setGameActivityAlerts(prev => prev.filter(a => a !== alert));
+        }, 10000);
+      });
+
       setSocket(newSocket);
 
       return () => {
@@ -52,7 +71,12 @@ export const SocketProvider = ({ children }) => {
   }, [user]);
 
   return (
-    <SocketContext.Provider value={{ socket, connected }}>
+    <SocketContext.Provider value={{ 
+      socket, 
+      connected, 
+      peerGameStatuses, 
+      gameActivityAlerts 
+    }}>
       {children}
     </SocketContext.Provider>
   );

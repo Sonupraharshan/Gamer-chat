@@ -34,7 +34,7 @@ router.post('/create', authMiddleware, async (req, res) => {
     });
 
     await group.save();
-    await group.populate('admin members coAdmins', 'username');
+    await group.populate('admin members coAdmins', 'username status gameStatus');
 
     const groupObj = group.toObject();
     groupObj.userRole = 'admin'; // Creator is always admin
@@ -102,7 +102,7 @@ router.post('/join', authMiddleware, async (req, res) => {
     // Add user as member
     group.members.push(req.user.id);
     await group.save();
-    await group.populate('admin members coAdmins', 'username');
+    await group.populate('admin members coAdmins', 'username status gameStatus');
 
     res.json({ 
       message: 'Successfully joined group',
@@ -118,9 +118,9 @@ router.post('/join', authMiddleware, async (req, res) => {
 router.get('/:groupId', authMiddleware, async (req, res) => {
   try {
     const group = await Group.findById(req.params.groupId)
-      .populate('admin', 'username')
-      .populate('coAdmins', 'username')
-      .populate('members', 'username');
+      .populate('admin', 'username status gameStatus')
+      .populate('coAdmins', 'username status gameStatus')
+      .populate('members', 'username status gameStatus');
 
     if (!group) {
       return res.status(404).json({ message: 'Group not found' });

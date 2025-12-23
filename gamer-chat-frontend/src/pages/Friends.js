@@ -1,9 +1,12 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { jwtDecode } from 'jwt-decode';
+import React, { useEffect, useState, useRef, useContext } from 'react';
+import { API_URL } from '../config';
+import { AuthContext } from '../context/AuthContext';
+import { SocketContext } from '../context/SocketContext';
+import { VoiceContext } from '../context/VoiceContext';
 
 const Friends = () => {
   const [friends, setFriends] = useState([]);
-  const [selectedFriendId, setSelectedFriendId] = useState(null);
+  const [selectedFriend, setSelectedFriend] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -11,15 +14,23 @@ const Friends = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [requests, setRequests] = useState([]);
+  
+  const { user } = useContext(AuthContext);
+  const { socket } = useContext(SocketContext);
+  const { 
+    initiatePrivateCall, acceptPrivateCall, declinePrivateCall, 
+    endPrivateCall, privateCall, remoteStreams 
+  } = useContext(VoiceContext);
+  
   const chatBoxRef = useRef(null);
-
-  const token = localStorage.getItem('token');
-  const currentUserId = token ? jwtDecode(token).id : null;
+  const token = user?.token;
+  const currentUserId = user?._id;
 
   useEffect(() => {
     const fetchFriends = async () => {
+      if (!token) return;
       try {
-        const res = await fetch('http://localhost:5000/api/user/friends', {
+        const res = await fetch(`${API_URL}/api/user/friends`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -31,10 +42,40 @@ const Friends = () => {
     fetchFriends();
   }, [token]);
 
-  const fetchMessages = async (friendId = selectedFriendId) => {
-    if (!friendId) return;
+  useEffect(() => {
+    if (!socket) return;
+    
+    socket.on('friend-status-changed', (data) => {
+      const { userId, status, gameStatus } = data;
+      setFriends(prev => prev.map(f => 
+        f._id === userId ? { ...f, status, gameStatus } : f
+      ));
+    });
+
+    socket.on('private-message', (msg) => {
+      if (!selectedFriend) return;
+      
+      const isFromSelected = msg.sender === selectedFriend._id || (msg.sender?._id === selectedFriend._id);
+      const isToSelected = msg.receiver === selectedFriend._id || (msg.receiver?._id === selectedFriend._id);
+      
+      if (isFromSelected || isToSelected) {
+        setMessages(prev => {
+          if (prev.some(m => m._id === msg._id)) return prev;
+          return [...prev, msg];
+        });
+      }
+    });
+
+    return () => {
+      socket.off('friend-status-changed');
+      socket.off('private-message');
+    };
+  }, [socket, selectedFriend]);
+
+  const fetchMessages = async (friendId) => {
+    if (!friendId || !token) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/message/${friendId}`, {
+      const res = await fetch(`${API_URL}/api/message/${friendId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -45,15 +86,10 @@ const Friends = () => {
   };
 
   useEffect(() => {
-    fetchMessages();
-  }, [selectedFriendId]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (selectedFriendId) fetchMessages();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [selectedFriendId]);
+    if (selectedFriend) {
+      fetchMessages(selectedFriend._id);
+    }
+  }, [selectedFriend]);
 
   useEffect(() => {
     if (chatBoxRef.current) {
@@ -62,9 +98,9 @@ const Friends = () => {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedFriendId) return;
+    if (!newMessage.trim() || !selectedFriend || !token) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/message/${selectedFriendId}`, {
+      const res = await fetch(`${API_URL}/api/message/${selectedFriend._id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,15 +110,12 @@ const Friends = () => {
       });
 
       const result = await res.json();
-      const sentMessage = {
-        _id: result._id || Date.now().toString(),
-        content: newMessage,
-        sender: currentUserId,
-        receiver: selectedFriendId,
-        createdAt: new Date().toISOString(),
-      };
+      const sentMessage = result.data;
 
-      setMessages((prev) => [...prev, sentMessage]);
+      setMessages((prev) => {
+        if (prev.some(m => m._id === sentMessage._id)) return prev;
+        return [...prev, sentMessage];
+      });
       setNewMessage('');
     } catch (err) {
       console.error('Error sending message', err);
@@ -90,8 +123,9 @@ const Friends = () => {
   };
 
   const handleSearch = async () => {
+    if (!token) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/user/search?username=${searchTerm}`, {
+      const res = await fetch(`${API_URL}/api/user/search?username=${searchTerm}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -102,382 +136,592 @@ const Friends = () => {
   };
 
   const handleSendRequest = async (username) => {
+    if (!token) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/user/request-by-username/${username}`, {
+      const res = await fetch(`${API_URL}/api/user/request-by-username/${username}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       alert(data.message);
-      setSearchResults([]);
-      setSearchTerm('');
       setShowSearchModal(false);
     } catch (err) {
       console.error('Request failed', err);
+      alert('Failed to send request');
     }
   };
 
   const handleViewRequests = async () => {
+    if (!token) return;
     try {
-      const res = await fetch('http://localhost:5000/api/user/requests', {
+      const res = await fetch(`${API_URL}/api/user/requests`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       setRequests(data.requests || []);
       setShowRequestsModal(true);
     } catch (err) {
-      console.error('View requests failed', err);
+      console.error('Failed to view requests', err);
     }
   };
 
   const handleAcceptRequest = async (senderId) => {
+    if (!token) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/user/accept/${senderId}`, {
+      const res = await fetch(`${API_URL}/api/user/accept/${senderId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       alert(data.message);
-      setRequests((prev) => prev.filter((r) => r._id !== senderId));
-      window.location.reload();
+      setShowRequestsModal(false);
+      // Refresh friends
+      const fres = await fetch(`${API_URL}/api/user/friends`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const fdata = await fres.json();
+      setFriends(fdata.friends || []);
     } catch (err) {
-      console.error('Accept failed', err);
+      console.error('Failed to accept request', err);
     }
   };
 
   return (
-    <div style={styles.container}>
-      {/* Sidebar */}
-      <div style={styles.sidebar}>
-        <h3 style={styles.sidebarTitle}>Friends</h3>
+    <div style={styles.container} className="animate-in">
+      {/* Sidebar: Friend List */}
+      <div style={styles.sidebar} className="glass-panel">
+        <div style={styles.sidebarHeader}>
+          <h3>Direct Messages</h3>
+          <button onClick={() => setShowSearchModal(true)} style={styles.addBtn}>+</button>
+        </div>
         <div style={styles.friendsList}>
-          {friends.map((friend) => (
-            <div
-              key={friend._id}
-              onClick={() => setSelectedFriendId(friend._id)}
+          {friends.map(friend => (
+            <div 
+              key={friend._id} 
+              onClick={() => setSelectedFriend(friend)}
               style={{
                 ...styles.friendItem,
-                backgroundColor: friend._id === selectedFriendId ? '#575050ff' : 'transparent',
+                backgroundColor: selectedFriend?._id === friend._id ? '#3f4147' : 'transparent'
               }}
             >
-              {friend.username}
+              <div style={styles.avatarContainer}>
+                <div style={styles.avatar}>{friend.username[0].toUpperCase()}</div>
+                <div style={{
+                  ...styles.statusDot,
+                  backgroundColor: friend.status === 'online' ? '#23a559' : '#80848e'
+                }} />
+              </div>
+              <div style={styles.friendInfo}>
+                <div style={styles.friendName}>{friend.username}</div>
+                <div style={styles.friendStatus}>
+                  {friend.gameStatus ? `Playing ${friend.gameStatus}` : (friend.status || 'offline')}
+                </div>
+              </div>
             </div>
           ))}
+          {friends.length === 0 && <p style={{ textAlign: 'center', opacity: 0.5, marginTop: '20px' }}>No friends yet</p>}
         </div>
-
-        {/* Fixed Buttons */}
-        <div style={styles.sidebarButtons}>
-          <button
-            style={styles.sendRequestBtn}
-            onClick={() => setShowSearchModal(true)}
-          >
-            Send Request
-          </button>
-          <button
-            style={styles.viewRequestsBtn}
-            onClick={handleViewRequests}
-          >
-            View Requests
+        <div style={styles.sidebarFooter}>
+          <button onClick={handleViewRequests} style={styles.footerBtn}>
+            Pending Requests ({requests.length})
           </button>
         </div>
       </div>
 
-      {/* Chat Panel */}
-      <div style={styles.chatPanel}>
-        {selectedFriendId ? (
-          <div style={styles.chatContainer}>
-            <div ref={chatBoxRef} style={styles.messagesContainer}>
-              {messages.length === 0 ? (
-                <p style={styles.noMessages}>No messages yet</p>
-              ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg._id}
-                    style={{
-                      textAlign: msg.sender === currentUserId ? 'right' : 'left',
-                      marginBottom: '8px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        padding: '8px 12px',
-                        backgroundColor: msg.sender === currentUserId ? '#556158ff' : '#575050ff',
-                        borderRadius: '8px',
-                        maxWidth: '60%',
-                        wordWrap: 'break-word',
-                        color: '#fff',
-                      }}
-                    >
-                      {msg.content}
-                    </span>
-                  </div>
-                ))
-              )}
+      {/* Main Container: Chat or Empty State */}
+      <div style={styles.mainContent} className="glass-panel">
+        {selectedFriend ? (
+          <>
+            <div style={styles.chatHeader}>
+              <div style={styles.headerLeft}>
+                <span style={styles.headerUsername}>@ {selectedFriend.username}</span>
+                <span style={styles.headerStatus}>
+                   {selectedFriend.status === 'online' ? '● Online' : '○ Offline'}
+                </span>
+              </div>
+              <div style={styles.headerActions}>
+                <button onClick={() => initiatePrivateCall(selectedFriend, false)} title="Voice Call" style={styles.iconBtn}>📞</button>
+                <button onClick={() => initiatePrivateCall(selectedFriend, true)} title="Video Call" style={styles.iconBtn}>📹</button>
+              </div>
             </div>
 
-            <div style={styles.inputContainer}>
-              <input
-                type="text"
+            <div style={styles.messagesArea} ref={chatBoxRef}>
+              {messages.length === 0 && <p style={{ textAlign: 'center', opacity: 0.5 }}>This is the beginning of your legendary conversation with {selectedFriend.username}.</p>}
+              {messages.map((msg, idx) => (
+                <div key={idx} style={styles.messageRow} className="animate-in">
+                  <div style={styles.msgAvatar}>
+                    {(msg.sender === currentUserId ? user.username : selectedFriend.username)[0].toUpperCase()}
+                  </div>
+                  <div style={styles.msgContent}>
+                    <div style={styles.msgHeader}>
+                      <span style={styles.msgUsername}>
+                        {msg.sender === currentUserId ? user.username : selectedFriend.username}
+                      </span>
+                      <span style={styles.msgTime}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div style={styles.msgText}>{msg.content}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={styles.inputArea}>
+              <input 
+                type="text" 
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type your message..."
-                style={styles.input}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder={`Message @${selectedFriend.username}`}
+                style={styles.messageInput}
               />
-              <button onClick={handleSendMessage} style={styles.sendBtn}>
-                Send
-              </button>
             </div>
-          </div>
+          </>
         ) : (
-          <div style={styles.placeholder}>
-            👈 Select a friend to start chatting
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>💬</div>
+            <h2>Select a friend to start chatting</h2>
+            <p>Or add new friends to grow your circle!</p>
           </div>
         )}
       </div>
 
-      {/* Search Modal */}
-      {showSearchModal && (
-        <Modal onClose={() => setShowSearchModal(false)} title="Send Friend Request">
-          <input
-            type="text"
-            placeholder="Enter username"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={styles.modalInput}
-          />
-          <button onClick={handleSearch} style={styles.searchBtn}>
-            Search
-          </button>
-          {searchResults.map((user) => (
-            <div key={user._id} style={styles.searchResult}
-              onClick={() => handleSendRequest(user.username)}>
-              {user.username}
+      {/* Call UI Overlays */}
+      {privateCall.status !== 'idle' && (
+        <div style={styles.callOverlay}>
+          <div style={styles.callCard}>
+            <div style={styles.callAvatar}>{privateCall.targetUser?.username[0].toUpperCase()}</div>
+            <h3>{privateCall.targetUser?.username}</h3>
+            <p>{privateCall.status === 'calling' ? 'Calling...' : privateCall.status === 'receiving' ? 'Incoming Call...' : 'In Call'}</p>
+            
+            {privateCall.status === 'in-call' && (
+               <div style={styles.remoteVideoContainer}>
+                  {remoteStreams[privateCall.targetUser?._id] ? (
+                    <video 
+                      autoPlay 
+                      ref={el => { if(el) el.srcObject = remoteStreams[privateCall.targetUser?._id] }} 
+                      style={styles.remoteVideo}
+                    />
+                  ) : (
+                    <div style={{ padding: '40px' }}>Audio Call Active</div>
+                  )}
+               </div>
+            )}
+
+            <div style={styles.callButtons}>
+              {privateCall.status === 'receiving' ? (
+                <>
+                  <button onClick={acceptPrivateCall} style={styles.acceptCallBtn}>Accept</button>
+                  <button onClick={declinePrivateCall} style={styles.declineCallBtn}>Decline</button>
+                </>
+              ) : (
+                <button onClick={endPrivateCall} style={styles.declineCallBtn}>End Call</button>
+              )}
             </div>
-          ))}
-        </Modal>
+          </div>
+        </div>
       )}
 
-      {/* Requests Modal */}
+      {/* Modals */}
+      {showSearchModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h2>Add Friend</h2>
+            <input 
+              type="text" 
+              placeholder="Enter username" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={styles.modalInput}
+            />
+            <button onClick={handleSearch} style={styles.primaryBtn}>Search</button>
+            <div style={styles.searchResults}>
+              {searchResults.map(u => (
+                <div key={u._id} style={styles.searchItem}>
+                  <span>{u.username}</span>
+                  <button onClick={() => handleSendRequest(u.username)} style={styles.addReqBtn}>Send Request</button>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setShowSearchModal(false)} style={styles.closeBtn}>Close</button>
+          </div>
+        </div>
+      )}
+
       {showRequestsModal && (
-        <Modal onClose={() => setShowRequestsModal(false)} title="Friend Requests">
-          {requests.length === 0 ? (
-            <p style={{ color: '#ccc' }}>No incoming requests</p>
-          ) : (
-            requests.map((req) => (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h2>Requests</h2>
+            {requests.map(req => (
               <div key={req._id} style={styles.requestItem}>
-                <strong style={{ color: '#fff' }}>{req.username}</strong>
-                <button
-                  onClick={() => handleAcceptRequest(req._id)}
-                  style={styles.acceptBtn}
-                >
-                  Accept
-                </button>
+                <span>{req.username}</span>
+                <button onClick={() => handleAcceptRequest(req._id)} style={styles.acceptCallBtn}>Accept</button>
               </div>
-            ))
-          )}
-        </Modal>
+            ))}
+            {requests.length === 0 && <p style={{ textAlign: 'center', opacity: 0.5 }}>No pending requests</p>}
+            <button onClick={() => setShowRequestsModal(false)} style={styles.closeBtn}>Close</button>
+          </div>
+        </div>
       )}
     </div>
   );
 };
 
-// Reusable Modal Component
-const Modal = ({ onClose, title, children }) => (
-  <div style={styles.modalOverlay}>
-    <div style={styles.modalContent}>
-      <h3 style={styles.modalTitle}>{title}</h3>
-      <div>{children}</div>
-      <button onClick={onClose} style={styles.closeBtn}>Close</button>
-    </div>
-  </div>
-);
-
 const styles = {
   container: {
     display: 'flex',
     height: '100vh',
-    backgroundColor: '#3d3a3aff'
+    width: '100vw',
+    backgroundColor: 'var(--bg-primary)',
+    color: 'var(--text-main)',
+    fontFamily: '"Inter", sans-serif',
+    overflow: 'hidden'
   },
   sidebar: {
-    width: '25%',
-    borderRight: '1px solid #555',
-    padding: '10px',
-    position: 'relative',
-    backgroundColor: '#272424ff',
-    color: '#fff'
-  },
-  sidebarTitle: {
-    color: '#fff',
-    marginTop: 0
-  },
-  friendsList: {
-    overflowY: 'auto',
-    maxHeight: 'calc(100vh - 150px)',
-    marginBottom: '60px'
-  },
-  friendItem: {
-    padding: '12px',
-    cursor: 'pointer',
-    borderRadius: '5px',
-    marginBottom: '5px',
-    transition: 'background-color 0.2s',
-    color: '#fff'
-  },
-  sidebarButtons: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    right: 10
-  },
-  sendRequestBtn: {
-    width: '100%',
-    padding: '10px',
-    backgroundColor: '#556158ff',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    marginBottom: '8px',
-    fontSize: '14px'
-  },
-  viewRequestsBtn: {
-    width: '100%',
-    padding: '10px',
-    backgroundColor: '#556158ff',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px'
-  },
-  chatPanel: {
-    width: '75%',
-    padding: '10px',
-    backgroundColor: '#3d3a3aff'
-  },
-  chatContainer: {
+    width: '320px',
+    backgroundColor: 'var(--bg-secondary)',
     display: 'flex',
     flexDirection: 'column',
-    height: '100%'
+    borderRight: '1px solid var(--glass-border)',
+    backdropFilter: 'blur(20px)'
   },
-  messagesContainer: {
+  sidebarHeader: {
+    padding: '20px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid #1e1f22'
+  },
+  addBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#fff',
+    fontSize: '24px',
+    cursor: 'pointer'
+  },
+  friendsList: {
     flex: 1,
     overflowY: 'auto',
-    border: '1px solid #555',
-    padding: '15px',
-    backgroundColor: '#272424ff',
-    borderRadius: '8px'
+    padding: '10px'
   },
-  noMessages: {
-    color: '#999',
-    textAlign: 'center'
-  },
-  inputContainer: {
+  friendItem: {
     display: 'flex',
-    marginTop: '10px',
-    gap: '10px'
+    alignItems: 'center',
+    padding: '10px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    marginBottom: '4px',
+    transition: 'background 0.2s'
   },
-  input: {
-    flex: 1,
-    padding: '12px',
-    backgroundColor: '#272424ff',
-    border: '1px solid #555',
-    borderRadius: '5px',
+  avatarContainer: {
+    position: 'relative',
+    marginRight: '12px'
+  },
+  avatar: {
+    width: '44px',
+    height: '44px',
+    borderRadius: '12px',
+    backgroundColor: 'var(--bg-tertiary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     color: '#fff',
-    fontSize: '14px'
+    fontWeight: '800',
+    border: '1px solid var(--glass-border)',
+    fontSize: '18px',
+    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
   },
-  sendBtn: {
-    padding: '12px 25px',
+  statusDot: {
+    position: 'absolute',
+    bottom: '-2px',
+    right: '-2px',
+    width: '14px',
+    height: '14px',
+    borderRadius: '50%',
+    border: '3px solid var(--bg-secondary)',
+    boxShadow: '0 0 10px rgba(0,0,0,0.5)'
+  },
+  friendInfo: {
+    flex: 1
+  },
+  friendName: {
+    fontSize: '15px',
+    fontWeight: '500',
+    color: '#fff'
+  },
+  friendStatus: {
+    fontSize: '12px',
+    color: '#949ba4'
+  },
+  sidebarFooter: {
+    padding: '15px',
+    borderTop: '1px solid #1e1f22'
+  },
+  footerBtn: {
+    width: '100%',
+    padding: '10px',
+    backgroundColor: '#3f4147',
+    border: 'none',
+    borderRadius: '4px',
+    color: '#fff',
+    cursor: 'pointer'
+  },
+  mainContent: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column'
+  },
+  chatHeader: {
+    height: '70px',
+    padding: '0 30px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid var(--glass-border)',
+    backgroundColor: 'var(--bg-secondary)',
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px'
+  },
+  headerUsername: {
+    fontSize: '18px',
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: '-0.5px'
+  },
+  headerStatus: {
+    fontSize: '12px',
+    color: 'var(--accent-secondary)',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '1px'
+  },
+  headerActions: {
+    display: 'flex',
+    gap: '15px'
+  },
+  iconBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '20px',
+    cursor: 'pointer',
+    opacity: 0.7,
+    transition: 'opacity 0.2s'
+  },
+  messagesArea: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px'
+  },
+  messageRow: {
+    display: 'flex',
+    gap: '16px',
+    '&:hover': {
+      backgroundColor: '#2e3035'
+    }
+  },
+  msgAvatar: {
+    width: '42px',
+    height: '42px',
+    borderRadius: '10px',
+    backgroundColor: 'var(--accent-primary)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#fff',
+    flexShrink: 0,
+    fontWeight: 'bold',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+  },
+  msgContent: {
+    flex: 1,
+    padding: '12px 16px',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: '0 12px 12px 12px',
+    border: '1px solid var(--glass-border)'
+  },
+  msgHeader: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: '8px',
+    marginBottom: '4px'
+  },
+  msgUsername: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: '15px'
+  },
+  msgTime: {
+    fontSize: '12px',
+    color: '#949ba4'
+  },
+  msgText: {
+    color: '#dbdee1',
+    lineHeight: '1.4',
+    wordBreak: 'break-word'
+  },
+  inputArea: {
+    padding: '0 20px 24px 20px'
+  },
+  messageInput: {
+    width: '100%',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: '#383a40',
+    color: '#dbdee1',
+    fontSize: '15px',
+    outline: 'none',
+    boxSizing: 'border-box'
+  },
+  emptyState: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#949ba4'
+  },
+  emptyIcon: {
+    fontSize: '80px',
+    marginBottom: '24px',
+    opacity: 0.2
+  },
+  callOverlay: {
+    position: 'fixed',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 3000
+  },
+  callCard: {
+    backgroundColor: '#1e1f22',
+    padding: '48px',
+    borderRadius: '24px',
+    textAlign: 'center',
+    width: '400px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+  },
+  callAvatar: {
+    width: '120px',
+    height: '120px',
+    borderRadius: '50%',
     backgroundColor: '#556158ff',
+    margin: '0 auto 24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '48px',
+    color: '#fff'
+  },
+  callButtons: {
+    display: 'flex',
+    gap: '24px',
+    justifyContent: 'center',
+    marginTop: '40px'
+  },
+  acceptCallBtn: {
+    padding: '12px 32px',
+    backgroundColor: '#23a559',
     color: '#fff',
     border: 'none',
-    borderRadius: '5px',
+    borderRadius: '8px',
     cursor: 'pointer',
-    fontSize: '14px'
+    fontWeight: '600'
   },
-  placeholder: {
-    textAlign: 'center',
-    marginTop: '40px',
-    color: '#999',
-    fontSize: '18px'
+  declineCallBtn: {
+    padding: '12px 32px',
+    backgroundColor: '#da373c',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600'
   },
   modalOverlay: {
     position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.8)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 999
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 4000
   },
-  modalContent: {
-    backgroundColor: '#272424ff',
-    padding: '25px',
-    borderRadius: '10px',
-    width: '400px',
-    border: '1px solid #555'
-  },
-  modalTitle: {
-    marginTop: 0,
-    color: '#fff'
+  modal: {
+    backgroundColor: '#313338',
+    padding: '32px',
+    borderRadius: '16px',
+    width: '440px',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
   },
   modalInput: {
     width: '100%',
-    padding: '10px',
-    marginBottom: '10px',
-    backgroundColor: '#3d3a3aff',
-    border: '1px solid #555',
-    borderRadius: '5px',
+    padding: '12px',
+    margin: '20px 0',
+    backgroundColor: '#1e1f22',
+    border: 'none',
+    borderRadius: '4px',
     color: '#fff',
-    boxSizing: 'border-box'
+    fontSize: '16px'
   },
-  searchBtn: {
+  primaryBtn: {
     width: '100%',
-    padding: '10px',
-    backgroundColor: '#556158ff',
+    padding: '12px',
+    backgroundColor: '#5865f2',
     color: '#fff',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer',
-    marginBottom: '10px'
+    fontWeight: '600',
+    fontSize: '15px'
   },
-  searchResult: {
-    padding: '10px',
-    borderBottom: '1px solid #555',
+  closeBtn: {
+    marginTop: '16px',
+    background: 'none',
+    border: 'none',
+    color: '#b5bac1',
     cursor: 'pointer',
-    color: '#fff',
-    transition: 'background-color 0.2s'
+    width: '100%',
+    textAlign: 'center'
   },
-  requestItem: {
-    marginBottom: '10px',
+  searchItem: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    padding: '12px',
+    borderBottom: '1px solid #3f4147'
   },
-  acceptBtn: {
-    padding: '8px 15px',
-    backgroundColor: '#556158ff',
+  addReqBtn: {
+    padding: '6px 12px',
+    backgroundColor: '#23a559',
     color: '#fff',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer'
   },
-  closeBtn: {
+  requestItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+    backgroundColor: '#2b2d31',
+    padding: '12px',
+    borderRadius: '8px'
+  },
+  remoteVideoContainer: {
+    marginTop: '24px',
+    backgroundColor: '#000',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    aspectRatio: '16/9'
+  },
+  remoteVideo: {
     width: '100%',
-    padding: '10px',
-    backgroundColor: '#dc3545',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    marginTop: '15px'
+    height: '100%',
+    objectFit: 'cover'
   }
 };
 
 export default Friends;
-

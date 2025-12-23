@@ -18,6 +18,12 @@ router.post('/:receiverId', verifyToken, async (req, res) => {
     const message = new Message({ sender: senderId, receiver: receiverId, content });
     await message.save();
 
+    // Emit real-time message to both parties
+    if (req.io) {
+      req.io.to(receiverId).emit('private-message', message);
+      req.io.to(senderId).emit('private-message', message);
+    }
+
     res.status(201).json({ message: "Message sent", data: message });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });

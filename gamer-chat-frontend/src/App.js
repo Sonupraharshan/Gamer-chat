@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Friends from './pages/Friends';
 import Home from './pages/Home';
+import ActiveCallBar from './components/ActiveCallBar';
 
 
 // ✅ Wrapper for protected routes
@@ -28,15 +29,18 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <Router>
-      <Routes>
-        {/* Protected Routes */}
-        <Route path="/" element={<Home />} />
-        <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+      <div style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden' }}>
+        <Routes>
+          {/* Protected Routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
 
-        {/* Public Routes */}
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      </Routes>
+          {/* Public Routes */}
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        </Routes>
+        <ActiveCallBar />
+      </div>
     </Router>
   );
 }

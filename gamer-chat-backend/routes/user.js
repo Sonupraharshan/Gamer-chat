@@ -11,8 +11,6 @@ router.get('/me', verifyToken, async (req, res) => {
   }
 });
 
-module.exports = router;
-
 const User = require('../models/User');
 
 // Send Friend Request by Username → POST /api/user/request-by-username/:username
@@ -102,7 +100,7 @@ router.get('/requests', verifyToken, async (req, res) => {
   // View list of accepted friends
 router.get('/friends', verifyToken, async (req, res) => {
     try {
-      const user = await User.findById(req.user.id).populate('friends', 'username email');
+      const user = await User.findById(req.user.id).populate('friends', 'username email status gameStatus lastSeen');
       res.status(200).json({ friends: user.friends });
     } catch (err) {
       res.status(500).json({ message: 'Server error', error: err.message });
@@ -160,3 +158,5 @@ router.get('/notifications/count', verifyToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+module.exports = router;

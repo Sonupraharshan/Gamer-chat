@@ -2,6 +2,7 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { API_URL } from '../config';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -12,7 +13,7 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const res = await fetch('http://localhost:5000/api/auth/login', {
+    const res = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),  
@@ -20,8 +21,7 @@ function Login() {
 
     const data = await res.json();
     if (res.ok) {
-      localStorage.setItem('token', data.token);
-      login(data.user); // save user globally
+      login(data); // data has { user, token }
       navigate('/'); // go home
     } else {
       alert(data.message || 'Login failed');

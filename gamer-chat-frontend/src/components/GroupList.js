@@ -69,6 +69,7 @@ function GroupList({ onSelectGroup, selectedGroup, onRefresh }) {
                 ...styles.groupCard,
                 ...(isSelected ? styles.selectedCard : {})
               }}
+              className="animate-in glass-panel glow-hover"
               onClick={() => onSelectGroup(group)}
             >
               <div style={styles.groupHeader}>
@@ -130,17 +131,17 @@ const styles = {
     marginTop: '15px'
   },
   groupCard: {
-    border: '1px solid #555',
-    borderRadius: '8px',
-    padding: '15px',
+    border: '1px solid var(--glass-border)',
+    borderRadius: '12px',
+    padding: '16px',
     cursor: 'pointer',
-    transition: 'all 0.2s',
-    backgroundColor: '#3d3a3aff'
+    transition: 'var(--transition-smooth)',
+    backgroundColor: 'var(--bg-tertiary)'
   },
   selectedCard: {
-    backgroundColor: '#575050ff',
-    border: '1px solid #556158ff',
-    boxShadow: '0 2px 4px rgba(85,97,88,0.3)'
+    backgroundColor: 'rgba(125, 95, 255, 0.2)',
+    border: '1px solid var(--accent-primary)',
+    boxShadow: 'var(--shadow-neon)'
   },
   groupHeader: {
     display: 'flex',

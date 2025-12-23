@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
+import { API_URL } from '../config';
 
 function NotificationBell({ onNavigateToFriends }) {
   const { user } = useContext(AuthContext);
@@ -8,8 +9,6 @@ function NotificationBell({ onNavigateToFriends }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
-
-  const token = localStorage.getItem('token');
 
   // Fetch notifications on mount and periodically
   useEffect(() => {
@@ -31,8 +30,9 @@ function NotificationBell({ onNavigateToFriends }) {
 
   const fetchNotificationCount = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/user/notifications/count', {
-        headers: { Authorization: `Bearer ${token}` }
+      const currentToken = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/user/notifications/count`, {
+        headers: { Authorization: `Bearer ${currentToken}` }
       });
       const data = await res.json();
       setUnreadCount(data.unreadCount || 0);
@@ -44,8 +44,9 @@ function NotificationBell({ onNavigateToFriends }) {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:5000/api/user/notifications', {
-        headers: { Authorization: `Bearer ${token}` }
+      const currentToken = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/user/notifications`, {
+        headers: { Authorization: `Bearer ${currentToken}` }
       });
       const data = await res.json();
       setNotifications(data.notifications || []);
@@ -65,9 +66,10 @@ function NotificationBell({ onNavigateToFriends }) {
 
   const handleAcceptRequest = async (senderId) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/user/accept/${senderId}`, {
+      const currentToken = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/user/accept/${senderId}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${currentToken}` }
       });
       const data = await res.json();
       

@@ -21,6 +21,19 @@ const UserSchema = new mongoose.Schema({
   },
   friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  gameStatus: {
+    type: String,
+    default: null
+  },
+  status: {
+    type: String,
+    enum: ['online', 'idle', 'dnd', 'offline'],
+    default: 'offline'
+  },
+  lastSeen: {
+    type: Date,
+    default: Date.now
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

@@ -1,8 +1,13 @@
 import React, { useContext, useState } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import * as groupApi from '../api/groupApi';
+import { VoiceContext } from '../context/VoiceContext';
 
 function MemberListItem({ member, group, userRole, currentUserId, onUpdate, socket }) {
+  const { 
+    isInVoice, startWhisper, stopWhisper, remoteStreams, whisperTarget,
+    isMuted, isCameraOn, isSharingScreen, remoteCameraStreams, remoteScreenStreams
+  } = useContext(VoiceContext);
   const [showActions, setShowActions] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -101,6 +106,15 @@ function MemberListItem({ member, group, userRole, currentUserId, onUpdate, sock
     <div style={styles.memberItem}>
       <div style={styles.memberInfo}>
         <span style={styles.username}>
+          <span style={{ 
+            display: 'inline-block', 
+            width: '10px', 
+            height: '10px', 
+            borderRadius: '50%', 
+            marginRight: '12px',
+            backgroundColor: member.status === 'online' ? 'var(--accent-secondary)' : 'var(--text-muted)',
+            boxShadow: member.status === 'online' ? '0 0 10px var(--accent-secondary)' : 'none'
+          }}></span>
           {member.username}
           {isCurrentUser && <span style={styles.youTag}> (You)</span>}
         </span>
@@ -112,57 +126,91 @@ function MemberListItem({ member, group, userRole, currentUserId, onUpdate, sock
         >
           {badge.text}
         </span>
-      </div>
-
-      {hasActions && !loading && (
-        <div style={styles.actionsContainer}>
-          <button
-            onClick={() => setShowActions(!showActions)}
-            style={styles.actionsBtn}
-          >
-            ⋮
-          </button>
-          
-          {showActions && (
-            <div style={styles.actionsMenu}>
-              {canPromote() && (
-                <button
-                  onClick={() => handleAction('promote')}
-                  style={styles.actionItem}
-                >
-                  Promote to Co-Admin
-                </button>
-              )}
-              {canDemote() && (
-                <button
-                  onClick={() => handleAction('demote')}
-                  style={styles.actionItem}
-                >
-                  Demote to Member
-                </button>
-              )}
-              {canTransferAdmin() && (
-                <button
-                  onClick={() => handleAction('transfer')}
-                  style={{...styles.actionItem, color: '#007bff'}}
-                >
-                  Transfer Admin
-                </button>
-              )}
-              {canKick() && (
-                <button
-                  onClick={() => handleAction('kick')}
-                  style={{...styles.actionItem, color: 'red'}}
-                >
-                  Kick Member
-                </button>
-              )}
-            </div>
+        
+        {/* Voice Status Indicators */}
+        <div style={styles.voiceStatusContainer}>
+          {(remoteStreams[member._id] || (isCurrentUser && isInVoice && !isMuted)) && (
+            <span style={styles.voiceIndicator} title="Speaking">🎙️</span>
+          )}
+          {(isCurrentUser && isInVoice && isMuted) && (
+            <span style={styles.voiceIndicator} title="Muted">🔇</span>
+          )}
+          {(remoteCameraStreams[member._id] || (isCurrentUser && isCameraOn)) && (
+            <span style={styles.voiceIndicator} title="Video On">📹</span>
+          )}
+          {(remoteScreenStreams[member._id] || (isCurrentUser && isSharingScreen)) && (
+            <span style={styles.voiceIndicator} title="Screen Sharing">🖥️</span>
           )}
         </div>
-      )}
-      
-      {loading && <span style={styles.loading}>...</span>}
+      </div>
+
+      <div style={styles.rightActions}>
+        {/* Whisper Button */}
+        {isInVoice && !isCurrentUser && remoteStreams[member._id] && (
+          <button
+            onMouseDown={() => startWhisper(member._id)}
+            onMouseUp={stopWhisper}
+            onMouseLeave={stopWhisper}
+            style={{
+              ...styles.whisperBtn,
+              backgroundColor: whisperTarget === member._id ? '#28a745' : '#6c757d'
+            }}
+            title="Press and hold to whisper"
+          >
+            🤫 Whisper
+          </button>
+        )}
+
+        {hasActions && !loading && (
+          <div style={styles.actionsContainer}>
+            <button
+              onClick={() => setShowActions(!showActions)}
+              style={styles.actionsBtn}
+            >
+              ⋮
+            </button>
+            
+            {showActions && (
+              <div style={styles.actionsMenu}>
+                {canPromote() && (
+                  <button
+                    onClick={() => handleAction('promote')}
+                    style={styles.actionItem}
+                  >
+                    Promote to Co-Admin
+                  </button>
+                )}
+                {canDemote() && (
+                  <button
+                    onClick={() => handleAction('demote')}
+                    style={styles.actionItem}
+                  >
+                    Demote to Member
+                  </button>
+                )}
+                {canTransferAdmin() && (
+                  <button
+                    onClick={() => handleAction('transfer')}
+                    style={{...styles.actionItem, color: '#007bff'}}
+                  >
+                    Transfer Admin
+                  </button>
+                )}
+                {canKick() && (
+                  <button
+                    onClick={() => handleAction('kick')}
+                    style={{...styles.actionItem, color: 'red'}}
+                  >
+                    Kick Member
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {loading && <span style={styles.loading}>...</span>}
+      </div>
     </div>
   );
 }
@@ -172,9 +220,12 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '10px',
-    borderBottom: '1px solid #eee',
-    position: 'relative'
+    padding: '12px 16px',
+    borderBottom: '1px solid var(--glass-border)',
+    position: 'relative',
+    transition: 'var(--transition-smooth)',
+    cursor: 'pointer',
+    backgroundColor: 'rgba(255,255,255,0.01)'
   },
   memberInfo: {
     display: 'flex',
@@ -183,8 +234,11 @@ const styles = {
     flex: 1
   },
   username: {
-    fontWeight: '500',
-    fontSize: '14px'
+    fontWeight: '600',
+    fontSize: '14px',
+    color: 'var(--text-main)',
+    display: 'flex',
+    alignItems: 'center'
   },
   youTag: {
     fontSize: '12px',
@@ -196,7 +250,17 @@ const styles = {
     borderRadius: '4px',
     fontSize: '11px',
     color: '#fff',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    whiteSpace: 'nowrap'
+  },
+  voiceStatusContainer: {
+    display: 'flex',
+    gap: '5px',
+    marginLeft: '5px'
+  },
+  voiceIndicator: {
+    fontSize: '12px',
+    cursor: 'help'
   },
   actionsContainer: {
     position: 'relative'
@@ -213,27 +277,49 @@ const styles = {
     position: 'absolute',
     right: 0,
     top: '100%',
-    backgroundColor: '#fff',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+    backgroundColor: 'var(--bg-tertiary)',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid var(--glass-border)',
+    borderRadius: '8px',
+    boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
     zIndex: 100,
-    minWidth: '180px'
+    minWidth: '200px',
+    overflow: 'hidden'
   },
   actionItem: {
     display: 'block',
     width: '100%',
-    padding: '10px 15px',
+    padding: '12px 16px',
     border: 'none',
     background: 'none',
     textAlign: 'left',
     cursor: 'pointer',
     fontSize: '13px',
-    transition: 'background 0.2s'
+    color: 'var(--text-main)',
+    transition: 'var(--transition-smooth)'
   },
   loading: {
     fontSize: '12px',
     color: '#999'
+  },
+  voiceIndicator: {
+    fontSize: '12px',
+    marginLeft: '5px'
+  },
+  rightActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  whisperBtn: {
+    padding: '4px 8px',
+    border: 'none',
+    borderRadius: '4px',
+    color: '#fff',
+    fontSize: '11px',
+    cursor: 'pointer',
+    transition: 'background 0.2s',
+    whiteSpace: 'nowrap'
   }
 };
 
