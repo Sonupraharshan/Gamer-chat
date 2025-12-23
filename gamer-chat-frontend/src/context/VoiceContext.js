@@ -214,9 +214,10 @@ export const VoiceProvider = ({ children }) => {
     // Renegotiate to signal track removal
     Object.entries(peerConnections.current).forEach(async ([userId, pc]) => {
       try {
+        if (pc.signalingState !== "stable") return;
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        socket.emit('webrtc-offer', { targetId: userId, offer, groupId: currentGroupId });
+        socket.emit('webrtc-offer', { targetId: userId, offer, groupId: currentGroupIdRef.current });
       } catch (e) {
         console.error("Renegotiation error after screen share stop", e);
       }
@@ -266,9 +267,10 @@ export const VoiceProvider = ({ children }) => {
       // Renegotiate with all peers
       Object.entries(peerConnections.current).forEach(async ([userId, pc]) => {
         try {
+          if (pc.signalingState !== "stable") return;
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
-          socket.emit('webrtc-offer', { targetId: userId, offer, groupId: currentGroupId });
+          socket.emit('webrtc-offer', { targetId: userId, offer, groupId: currentGroupIdRef.current });
         } catch (e) {
           console.error('Renegotiation error after camera toggle:', e);
         }
@@ -490,23 +492,39 @@ export const VoiceProvider = ({ children }) => {
     socket.on('webrtc-offer', async (data) => {
       const { offer, senderId, senderUsername } = data;
       // Use refs to avoid stale closure issue
-      if (!isInVoiceRef.current || !localStreamRef.current) return;
+      const isActuallyInVoice = isInVoiceRef.current || (privateCallRef.current.status === 'in-call' && privateCallRef.current.targetUser?._id === senderId);
+      if (!isActuallyInVoice || !localStreamRef.current) return;
       
-      const pc = createPeerConnection(senderId, localStreamRef.current);
-      peerConnections.current[senderId] = pc;
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      socket.emit('webrtc-answer', { targetId: senderId, answer });
-      processQueuedCandidates(senderId);
+      let pc = peerConnections.current[senderId];
+      if (!pc) {
+        console.log(`[WebRTC] Creating new PC for ${senderUsername} via offer`);
+        pc = createPeerConnection(senderId, localStreamRef.current);
+        peerConnections.current[senderId] = pc;
+      } else {
+        console.log(`[WebRTC] Reusing existing PC for ${senderUsername} via offer. Current state: ${pc.signalingState}`);
+      }
+      
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        socket.emit('webrtc-answer', { targetId: senderId, answer });
+        processQueuedCandidates(senderId);
+      } catch (err) {
+        console.error("[WebRTC] Error processing offer:", err);
+      }
     });
 
     socket.on('webrtc-answer', async (data) => {
       const { answer, senderId } = data;
       const pc = peerConnections.current[senderId];
       if (pc && pc.signalingState === "have-local-offer") {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        processQueuedCandidates(senderId);
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+          processQueuedCandidates(senderId);
+        } catch (err) {
+          console.error("[WebRTC] Error setting remote answer:", err);
+        }
       }
     });
 
