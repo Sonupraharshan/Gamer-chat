@@ -306,7 +306,7 @@ export const VoiceProvider = ({ children }) => {
       // Use the first stream provided, or create one if none exists (robustness)
       const stream = event.streams && event.streams.length > 0 ? event.streams[0] : new MediaStream([track]);
       
-      console.log(`[WebRTC] Received ${track.kind} track from ${targetUserId}`);
+      console.log(`[WebRTC] Received ${track.kind} track from ${targetUserId}. TrackID: ${track.id}, StreamID: ${stream.id}`);
 
       if (track.kind === 'audio') {
         setRemoteStreams(prev => ({ ...prev, [targetUserId]: stream }));

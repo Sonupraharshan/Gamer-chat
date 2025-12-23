@@ -8,9 +8,6 @@ const PrivateCallOverlay = () => {
     isMuted, toggleMute, isCameraOn, toggleCamera
   } = useContext(VoiceContext);
   
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-  const remoteAudioRef = useRef(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Handle resize
@@ -20,42 +17,14 @@ const PrivateCallOverlay = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Set local video stream
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  }, [localStream]);
-
-  // Set remote video/audio streams
-  useEffect(() => {
-    if (!privateCall.targetUser) return;
-    
-    const remoteAudio = remoteStreams[privateCall.targetUser._id];
-    const remoteVideo = remoteCameraStreams[privateCall.targetUser._id];
-    
-    if (remoteAudioRef.current && remoteAudio) {
-      remoteAudioRef.current.srcObject = remoteAudio;
-    }
-    if (remoteVideoRef.current && remoteVideo) {
-      remoteVideoRef.current.srcObject = remoteVideo;
-    }
-  }, [privateCall.targetUser, remoteStreams, remoteCameraStreams]);
-
-  const toggleFullscreen = (videoElement) => {
-    if (!videoElement) return;
-    if (videoElement.requestFullscreen) {
-      videoElement.requestFullscreen();
-    } else if (videoElement.webkitRequestFullscreen) {
-      videoElement.webkitRequestFullscreen();
-    }
-  };
-
   // Only show when in an active private call
   if (privateCall.status !== 'in-call' && privateCall.status !== 'calling') return null;
 
   const isCalling = privateCall.status === 'calling';
-  const hasRemoteVideo = privateCall.targetUser && remoteCameraStreams[privateCall.targetUser._id];
+  const targetId = privateCall.targetUser?._id;
+  const remoteAudio = targetId ? remoteStreams[targetId] : null;
+  const remoteVideo = targetId ? remoteCameraStreams[targetId] : null;
+  const hasRemoteVideo = !!remoteVideo;
 
   // Dynamic styles based on mobile
   const dynamicStyles = {
@@ -121,12 +90,10 @@ const PrivateCallOverlay = () => {
           <div style={styles.remoteVideoContainer}>
             {hasRemoteVideo ? (
               <video 
-                ref={remoteVideoRef}
+                ref={el => { if (el) el.srcObject = remoteVideo; }}
                 autoPlay
                 playsInline
                 style={styles.remoteVideo}
-                onClick={(e) => toggleFullscreen(e.target)}
-                title="Click to fullscreen"
               />
             ) : (
               <div style={styles.avatarPlaceholder}>
@@ -136,35 +103,24 @@ const PrivateCallOverlay = () => {
                 {isCalling && <div style={styles.callingPulse} />}
               </div>
             )}
-            {/* Fullscreen button for remote video */}
-            {hasRemoteVideo && (
-              <button 
-                style={styles.fullscreenBtn}
-                onClick={() => toggleFullscreen(remoteVideoRef.current)}
-                title="Fullscreen"
-              >
-                ⛶
-              </button>
-            )}
           </div>
 
           {/* Local Video (Small Picture-in-Picture) */}
           {privateCall.isVideo && localStream && (
             <div style={dynamicStyles.localVideoContainer}>
               <video 
-                ref={localVideoRef}
+                ref={el => { if (el) el.srcObject = localStream; }}
                 autoPlay
                 playsInline
                 muted
                 style={styles.localVideo}
-                onClick={(e) => toggleFullscreen(e.target)}
               />
             </div>
           )}
         </div>
 
         {/* Hidden audio for remote */}
-        <audio ref={remoteAudioRef} autoPlay />
+        <audio ref={el => { if (el) el.srcObject = remoteAudio; }} autoPlay />
 
         {/* Controls */}
         <div style={dynamicStyles.controls}>
@@ -289,21 +245,7 @@ const styles = {
   localVideo: {
     width: '100%',
     height: '100%',
-    objectFit: 'cover',
-    cursor: 'pointer'
-  },
-  fullscreenBtn: {
-    position: 'absolute',
-    top: '20px',
-    right: '20px',
-    background: 'rgba(0,0,0,0.5)',
-    border: 'none',
-    color: '#fff',
-    fontSize: '24px',
-    padding: '10px 15px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    transition: 'all 0.2s'
+    objectFit: 'cover'
   },
   controls: {
     display: 'flex',
