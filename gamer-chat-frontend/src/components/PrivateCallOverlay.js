@@ -117,39 +117,39 @@ const PrivateCallOverlay = () => {
               />
             </div>
           )}
+
+          {/* WhatsApp-Style Floating Controls */}
+          <div style={dynamicStyles.controls}>
+            <button 
+              onClick={toggleMute}
+              style={{...dynamicStyles.controlBtn, backgroundColor: isMuted ? '#f04747' : 'rgba(255,255,255,0.2)'}}
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
+              {isMuted ? '🔇' : '🎙️'}
+            </button>
+            
+            {privateCall.isVideo && (
+              <button 
+                onClick={toggleCamera}
+                style={{...dynamicStyles.controlBtn, backgroundColor: isCameraOn ? '#43b581' : 'rgba(255,255,255,0.2)'}}
+                title={isCameraOn ? 'Turn Off Camera' : 'Turn On Camera'}
+              >
+                📹
+              </button>
+            )}
+            
+            <button 
+              onClick={endPrivateCall}
+              style={dynamicStyles.endCallBtn}
+              title="End Call"
+            >
+              📞
+            </button>
+          </div>
         </div>
 
         {/* Hidden audio for remote */}
         <audio ref={el => { if (el) el.srcObject = remoteAudio; }} autoPlay />
-
-        {/* Controls */}
-        <div style={dynamicStyles.controls}>
-          <button 
-            onClick={toggleMute}
-            style={{...dynamicStyles.controlBtn, backgroundColor: isMuted ? '#f04747' : '#36393f'}}
-            title={isMuted ? 'Unmute' : 'Mute'}
-          >
-            {isMuted ? '🔇' : '🎙️'}
-          </button>
-          
-          {privateCall.isVideo && (
-            <button 
-              onClick={toggleCamera}
-              style={{...dynamicStyles.controlBtn, backgroundColor: isCameraOn ? '#43b581' : '#36393f'}}
-              title={isCameraOn ? 'Turn Off Camera' : 'Turn On Camera'}
-            >
-              📹
-            </button>
-          )}
-          
-          <button 
-            onClick={endPrivateCall}
-            style={dynamicStyles.endCallBtn}
-            title="End Call"
-          >
-            📞
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -248,9 +248,19 @@ const styles = {
     objectFit: 'cover'
   },
   controls: {
+    position: 'absolute',
+    bottom: '30px',
+    left: '50%',
+    transform: 'translateX(-50%)',
     display: 'flex',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)'
+    gap: '20px',
+    padding: '12px 24px',
+    borderRadius: '40px',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backdropFilter: 'blur(10px)',
+    zIndex: 10,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+    border: '1px solid rgba(255,255,255,0.1)'
   },
   controlBtn: {
     borderRadius: '50%',
@@ -260,7 +270,8 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     color: '#fff',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s',
+    backgroundColor: 'rgba(255,255,255,0.2)'
   },
   endCallBtn: {
     borderRadius: '50%',
@@ -272,7 +283,8 @@ const styles = {
     justifyContent: 'center',
     color: '#fff',
     transform: 'rotate(135deg)',
-    boxShadow: '0 0 20px rgba(240, 71, 71, 0.4)'
+    boxShadow: '0 0 20px rgba(240, 71, 71, 0.4)',
+    transition: 'all 0.2s'
   }
 };
 
