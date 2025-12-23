@@ -2,8 +2,8 @@
 
 A feature-rich, real-time communication platform designed for gamers. Connect with friends, create game lobbies, enjoy crystal-clear voice & video calls, and chat in real-time.
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-gamer--chat--frontend.vercel.app-00C853)](https://gamer-chat.vercel.app)
-[![Platform](https://img.shields.io/badge/Platform-Web-blue)](https://gamer-chat-frontend.vercel.app)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-gamer--chat.vercel.app-00C853)](https://gamer-chat.vercel.app)
+[![Platform](https://img.shields.io/badge/Platform-Web-blue)](https://gamer-chat.vercel.app)
 [![Frontend](https://img.shields.io/badge/Frontend-React_18-61DAFB?logo=react)](https://reactjs.org/)
 [![Backend](https://img.shields.io/badge/Backend-Node.js-339933?logo=node.js)](https://nodejs.org/)
 [![Database](https://img.shields.io/badge/Database-MongoDB_Atlas-47A248?logo=mongodb)](https://www.mongodb.com/)
