@@ -20,52 +20,65 @@ const IncomingCallOverlay = () => {
     gentle: { freq: 523, pattern: [400, 400] }, // C5 note, slow pulse
   };
 
-  const playRingtone = () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+  const playRingtone = async () => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      
+      const ctx = audioContextRef.current;
+      
+      // Resume context if suspended (browser autoplay policy)
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      
+      const pattern = ringtonePatterns[ringtoneType] || ringtonePatterns.classic;
+      let patternIndex = 0;
+      
+      const playNote = () => {
+        // Don't play if context not running
+        if (ctx.state !== 'running') return;
+        
+        // Clean up previous oscillator
+        if (oscillatorRef.current) {
+          try { oscillatorRef.current.stop(); } catch (e) {}
+        }
+        
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.type = 'sine';
+        osc.frequency.value = pattern.freq;
+        
+        const duration = pattern.pattern[patternIndex] / 1000;
+        const isNote = patternIndex % 2 === 0;
+        
+        gain.gain.setValueAtTime(isNote ? 0.3 : 0, ctx.currentTime);
+        if (isNote) {
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+        }
+        
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + duration);
+        
+        oscillatorRef.current = osc;
+        gainRef.current = gain;
+        
+        patternIndex = (patternIndex + 1) % pattern.pattern.length;
+      };
+      
+      // Play immediately and then on interval
+      playNote();
+      intervalRef.current = setInterval(playNote, 
+        pattern.pattern.reduce((a, b) => a + b, 0) / pattern.pattern.length
+      );
+    } catch (e) {
+      console.error('Ringtone play error:', e);
     }
-    
-    const ctx = audioContextRef.current;
-    const pattern = ringtonePatterns[ringtoneType] || ringtonePatterns.classic;
-    let patternIndex = 0;
-    
-    const playNote = () => {
-      // Clean up previous oscillator
-      if (oscillatorRef.current) {
-        try { oscillatorRef.current.stop(); } catch (e) {}
-      }
-      
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.type = 'sine';
-      osc.frequency.value = pattern.freq;
-      
-      const duration = pattern.pattern[patternIndex] / 1000;
-      const isNote = patternIndex % 2 === 0;
-      
-      gain.gain.setValueAtTime(isNote ? 0.3 : 0, ctx.currentTime);
-      if (isNote) {
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
-      }
-      
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + duration);
-      
-      oscillatorRef.current = osc;
-      gainRef.current = gain;
-      
-      patternIndex = (patternIndex + 1) % pattern.pattern.length;
-    };
-    
-    // Play immediately and then on interval
-    playNote();
-    intervalRef.current = setInterval(playNote, 
-      pattern.pattern.reduce((a, b) => a + b, 0) / pattern.pattern.length
-    );
   };
 
   const stopRingtone = () => {
@@ -78,6 +91,26 @@ const IncomingCallOverlay = () => {
       oscillatorRef.current = null;
     }
   };
+
+  // Unlock audio on first user interaction (browser autoplay policy workaround)
+  useEffect(() => {
+    const unlockAudio = () => {
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+    };
+    
+    // Listen for first interaction
+    document.addEventListener('click', unlockAudio, { once: true });
+    document.addEventListener('touchstart', unlockAudio, { once: true });
+    document.addEventListener('keydown', unlockAudio, { once: true });
+    
+    return () => {
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+    };
+  }, []);
 
   useEffect(() => {
     if (privateCall.status === 'receiving') {

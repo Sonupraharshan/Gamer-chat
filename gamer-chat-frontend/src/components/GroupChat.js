@@ -499,7 +499,19 @@ function GroupChat({ group: initialGroup, onLeave, onUpdate }) {
                         border: remoteStreams[participant._id] ? '2px solid var(--accent-secondary)' : '1px solid var(--glass-border)'
                       }}>
                         {hasCamera ? (
-                          <video ref={el => { if (el) el.srcObject = remoteCameraStreams[participant._id]; }} autoPlay style={styles.videoContent} />
+                          <video 
+                            ref={el => { if (el) el.srcObject = remoteCameraStreams[participant._id]; }} 
+                            autoPlay 
+                            style={styles.videoContent}
+                            onClick={(e) => {
+                              if (e.target.requestFullscreen) {
+                                e.target.requestFullscreen();
+                              } else if (e.target.webkitRequestFullscreen) {
+                                e.target.webkitRequestFullscreen();
+                              }
+                            }}
+                            title="Click to fullscreen"
+                          />
                         ) : (
                           <div style={styles.avatarPlaceholderSmall}>
                             <span style={styles.placeholderCharSmall}>{participant.username[0].toUpperCase()}</span>
@@ -507,13 +519,54 @@ function GroupChat({ group: initialGroup, onLeave, onUpdate }) {
                         )}
                         <div style={styles.tileOverlay}>
                           <span style={styles.tileName}>{participant.username}</span>
+                          {hasCamera && (
+                            <button 
+                              style={styles.fullscreenBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const video = e.target.closest('div[style]').querySelector('video');
+                                if (video) {
+                                  if (video.requestFullscreen) video.requestFullscreen();
+                                  else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+                                }
+                              }}
+                              title="Fullscreen"
+                            >
+                              ⛶
+                            </button>
+                          )}
                         </div>
                       </div>
                       
                       {hasScreen && (
                         <div style={styles.videoTile}>
-                          <video ref={el => { if (el) el.srcObject = remoteScreenStreams[participant._id]; }} autoPlay style={styles.videoContent} />
-                          <div style={styles.tileOverlay}>{participant.username}'s Screen</div>
+                          <video 
+                            ref={el => { if (el) el.srcObject = remoteScreenStreams[participant._id]; }} 
+                            autoPlay 
+                            style={styles.videoContent}
+                            onClick={(e) => {
+                              if (e.target.requestFullscreen) e.target.requestFullscreen();
+                              else if (e.target.webkitRequestFullscreen) e.target.webkitRequestFullscreen();
+                            }}
+                            title="Click to fullscreen"
+                          />
+                          <div style={styles.tileOverlay}>
+                            <span>{participant.username}'s Screen</span>
+                            <button 
+                              style={styles.fullscreenBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const video = e.target.closest('div[style]').querySelector('video');
+                                if (video) {
+                                  if (video.requestFullscreen) video.requestFullscreen();
+                                  else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+                                }
+                              }}
+                              title="Fullscreen"
+                            >
+                              ⛶
+                            </button>
+                          </div>
                         </div>
                       )}
                     </React.Fragment>
@@ -752,14 +805,28 @@ const styles = {
     position: 'absolute',
     bottom: '12px',
     left: '12px',
+    right: '12px',
     backgroundColor: 'rgba(0,0,0,0.5)',
     padding: '4px 8px',
     borderRadius: '4px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   tileName: {
     fontSize: '13px',
     color: '#fff',
     fontWeight: '600'
+  },
+  fullscreenBtn: {
+    background: 'rgba(255,255,255,0.2)',
+    border: 'none',
+    color: '#fff',
+    fontSize: '16px',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
   },
   screenTag: {
     position: 'absolute',
