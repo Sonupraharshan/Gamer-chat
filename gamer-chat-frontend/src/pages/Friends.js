@@ -138,13 +138,15 @@ const Friends = () => {
   const handleSendRequest = async (username) => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_URL}/api/user/request-by-username/${username}`, {
+      const res = await fetch(`${API_URL}/api/user/request-by-username/${encodeURIComponent(username)}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       alert(data.message);
       setShowSearchModal(false);
+      setSearchTerm('');
+      setSearchResults([]);
     } catch (err) {
       console.error('Request failed', err);
       alert('Failed to send request');

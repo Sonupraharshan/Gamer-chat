@@ -20,7 +20,10 @@ router.post('/request-by-username/:username', verifyToken, async (req, res) => {
     const toUsername = req.params.username;
 
     const fromUser = await User.findById(fromUserId);
-    const toUser = await User.findOne({ username: toUsername });
+    // Use case-insensitive lookup to match search behavior
+    // Escape regex special characters for safety
+    const escapedUsername = toUsername.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const toUser = await User.findOne({ username: { $regex: `^${escapedUsername}$`, $options: 'i' } });
 
     if (!toUser) {
       return res.status(404).json({ message: 'User not found' });
