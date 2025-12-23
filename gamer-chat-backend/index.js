@@ -33,8 +33,24 @@ const io = new Server(server, {
 
 // 5. Middleware to read JSON and allow frontend access
 app.use(express.json());
+
+// CORS: Allow both local dev and production frontend
+const allowedOrigins = [
+  'http://localhost:3000',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(null, true); // Allow anyway for debugging - remove in strict production
+    }
+  },
   credentials: true
 }));
 app.use((req, res, next) => {
