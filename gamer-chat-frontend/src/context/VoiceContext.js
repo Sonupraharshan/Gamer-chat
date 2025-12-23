@@ -538,6 +538,14 @@ export const VoiceProvider = ({ children }) => {
 
     socket.on('private-call-request', (data) => {
       const { fromUserId, fromUsername, offer, isVideo } = data;
+      
+      // Guard: Don't process if we are the caller (we initiated this call)
+      // This prevents the caller from hearing the ringtone
+      if (privateCall.status === 'calling') {
+        console.log('Ignoring private-call-request - we are the caller');
+        return;
+      }
+      
       console.log('📞 Incoming call from:', fromUsername);
       setPrivateCall({
         status: 'receiving',

@@ -1,5 +1,5 @@
 // src/components/PrivateCallOverlay.js
-import React, { useContext, useRef, useEffect } from 'react';
+import React, { useContext, useRef, useEffect, useState } from 'react';
 import { VoiceContext } from '../context/VoiceContext';
 
 const PrivateCallOverlay = () => {
@@ -11,6 +11,14 @@ const PrivateCallOverlay = () => {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Handle resize
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Set local video stream
   useEffect(() => {
@@ -49,12 +57,57 @@ const PrivateCallOverlay = () => {
   const isCalling = privateCall.status === 'calling';
   const hasRemoteVideo = privateCall.targetUser && remoteCameraStreams[privateCall.targetUser._id];
 
+  // Dynamic styles based on mobile
+  const dynamicStyles = {
+    callContainer: {
+      ...styles.callContainer,
+      width: isMobile ? '100%' : '90%',
+      height: isMobile ? '100vh' : '80vh',
+      maxWidth: isMobile ? '100%' : '900px',
+      borderRadius: isMobile ? 0 : '24px',
+    },
+    header: {
+      ...styles.header,
+      padding: isMobile ? '12px 16px' : '20px',
+      flexDirection: isMobile ? 'column' : 'row',
+      gap: isMobile ? '4px' : '0',
+    },
+    callerName: {
+      ...styles.callerName,
+      fontSize: isMobile ? '16px' : '20px',
+    },
+    localVideoContainer: {
+      ...styles.localVideoContainer,
+      width: isMobile ? '100px' : '180px',
+      height: isMobile ? '75px' : '120px',
+      bottom: isMobile ? '90px' : '20px',
+      right: isMobile ? '10px' : '20px',
+    },
+    controls: {
+      ...styles.controls,
+      padding: isMobile ? '12px' : '20px',
+      gap: isMobile ? '12px' : '20px',
+    },
+    controlBtn: {
+      ...styles.controlBtn,
+      width: isMobile ? '50px' : '60px',
+      height: isMobile ? '50px' : '60px',
+      fontSize: isMobile ? '20px' : '24px',
+    },
+    endCallBtn: {
+      ...styles.endCallBtn,
+      width: isMobile ? '50px' : '60px',
+      height: isMobile ? '50px' : '60px',
+      fontSize: isMobile ? '20px' : '24px',
+    },
+  };
+
   return (
     <div style={styles.overlay}>
-      <div style={styles.callContainer} className="glass-panel">
+      <div style={dynamicStyles.callContainer} className="glass-panel">
         {/* Call Header */}
-        <div style={styles.header}>
-          <span style={styles.callerName}>
+        <div style={dynamicStyles.header}>
+          <span style={dynamicStyles.callerName}>
             {isCalling ? `Calling ${privateCall.targetUser?.username}...` : `In call with ${privateCall.targetUser?.username}`}
           </span>
           <span style={styles.callType}>
@@ -97,7 +150,7 @@ const PrivateCallOverlay = () => {
 
           {/* Local Video (Small Picture-in-Picture) */}
           {privateCall.isVideo && localStream && (
-            <div style={styles.localVideoContainer}>
+            <div style={dynamicStyles.localVideoContainer}>
               <video 
                 ref={localVideoRef}
                 autoPlay
@@ -114,10 +167,10 @@ const PrivateCallOverlay = () => {
         <audio ref={remoteAudioRef} autoPlay />
 
         {/* Controls */}
-        <div style={styles.controls}>
+        <div style={dynamicStyles.controls}>
           <button 
             onClick={toggleMute}
-            style={{...styles.controlBtn, backgroundColor: isMuted ? '#f04747' : '#36393f'}}
+            style={{...dynamicStyles.controlBtn, backgroundColor: isMuted ? '#f04747' : '#36393f'}}
             title={isMuted ? 'Unmute' : 'Mute'}
           >
             {isMuted ? '🔇' : '🎙️'}
@@ -126,7 +179,7 @@ const PrivateCallOverlay = () => {
           {privateCall.isVideo && (
             <button 
               onClick={toggleCamera}
-              style={{...styles.controlBtn, backgroundColor: isCameraOn ? '#43b581' : '#36393f'}}
+              style={{...dynamicStyles.controlBtn, backgroundColor: isCameraOn ? '#43b581' : '#36393f'}}
               title={isCameraOn ? 'Turn Off Camera' : 'Turn On Camera'}
             >
               📹
@@ -135,7 +188,7 @@ const PrivateCallOverlay = () => {
           
           <button 
             onClick={endPrivateCall}
-            style={styles.endCallBtn}
+            style={dynamicStyles.endCallBtn}
             title="End Call"
           >
             📞
@@ -161,23 +214,17 @@ const styles = {
     backdropFilter: 'blur(8px)'
   },
   callContainer: {
-    width: '90%',
-    maxWidth: '900px',
-    height: '80vh',
     display: 'flex',
     flexDirection: 'column',
-    borderRadius: '24px',
     overflow: 'hidden'
   },
   header: {
-    padding: '20px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.3)'
   },
   callerName: {
-    fontSize: '20px',
     fontWeight: '700',
     color: '#fff'
   },
@@ -208,8 +255,8 @@ const styles = {
     cursor: 'pointer'
   },
   avatarPlaceholder: {
-    width: '150px',
-    height: '150px',
+    width: '120px',
+    height: '120px',
     borderRadius: '50%',
     backgroundColor: 'var(--accent-primary)',
     display: 'flex',
@@ -218,7 +265,7 @@ const styles = {
     position: 'relative'
   },
   avatarChar: {
-    fontSize: '60px',
+    fontSize: '48px',
     fontWeight: '700',
     color: '#fff'
   },
@@ -234,10 +281,6 @@ const styles = {
   },
   localVideoContainer: {
     position: 'absolute',
-    bottom: '20px',
-    right: '20px',
-    width: '180px',
-    height: '120px',
     borderRadius: '12px',
     overflow: 'hidden',
     border: '2px solid var(--glass-border)',
@@ -263,28 +306,21 @@ const styles = {
     transition: 'all 0.2s'
   },
   controls: {
-    padding: '20px',
     display: 'flex',
     justifyContent: 'center',
-    gap: '20px',
     backgroundColor: 'rgba(0,0,0,0.3)'
   },
   controlBtn: {
-    width: '60px',
-    height: '60px',
     borderRadius: '50%',
     border: 'none',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '24px',
     color: '#fff',
     transition: 'all 0.2s'
   },
   endCallBtn: {
-    width: '60px',
-    height: '60px',
     borderRadius: '50%',
     border: 'none',
     backgroundColor: '#f04747',
@@ -292,7 +328,6 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '24px',
     color: '#fff',
     transform: 'rotate(135deg)',
     boxShadow: '0 0 20px rgba(240, 71, 71, 0.4)'
