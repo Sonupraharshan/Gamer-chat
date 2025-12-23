@@ -219,14 +219,25 @@ export const VoiceProvider = ({ children }) => {
   // Camera Toggling
   const toggleCamera = async () => {
     try {
+      if (!localStream) {
+        console.error('No local stream available for camera toggle');
+        return;
+      }
+      
       if (isCameraOn) {
         // Stop camera tracks
-        localStream.getVideoTracks().forEach(track => {
+        const videoTracks = localStream.getVideoTracks();
+        videoTracks.forEach(track => {
           track.stop();
+          // Remove from peer connections
           Object.values(peerConnections.current).forEach(pc => {
             const sender = pc.getSenders().find(s => s.track === track);
-            if (sender) pc.removeTrack(sender);
+            if (sender) {
+              pc.removeTrack(sender);
+            }
           });
+          // Remove from localStream
+          localStream.removeTrack(track);
         });
         setIsCameraOn(false);
       } else {
@@ -245,14 +256,19 @@ export const VoiceProvider = ({ children }) => {
         setIsCameraOn(true);
       }
       
-      // Renegotiate
+      // Renegotiate with all peers
       Object.entries(peerConnections.current).forEach(async ([userId, pc]) => {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.emit('webrtc-offer', { targetId: userId, offer, groupId: currentGroupId });
+        try {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket.emit('webrtc-offer', { targetId: userId, offer, groupId: currentGroupId });
+        } catch (e) {
+          console.error('Renegotiation error after camera toggle:', e);
+        }
       });
     } catch (error) {
       console.error('Error toggling camera:', error);
+      alert('Could not access camera. Please check permissions.');
     }
   };
 
