@@ -622,40 +622,43 @@ export const VoiceProvider = ({ children }) => {
   };
 
   const acceptPrivateCall = async () => {
-    if (!privateCall.incomingOffer) return;
+    const currentCall = privateCallRef.current;
+    if (!currentCall.incomingOffer || !currentCall.targetUser) return;
     
-    const stream = await startLocalStream(privateCall.isVideo);
+    const stream = await startLocalStream(currentCall.isVideo);
     if (!stream) return;
 
-    setIsCameraOn(privateCall.isVideo);
+    setIsCameraOn(currentCall.isVideo);
     localStreamRef.current = stream;
     
-    const pc = createPeerConnection(privateCall.targetUser._id, stream, true);
-    peerConnections.current[privateCall.targetUser._id] = pc;
+    const pc = createPeerConnection(currentCall.targetUser._id, stream, true);
+    peerConnections.current[currentCall.targetUser._id] = pc;
     
-    await pc.setRemoteDescription(new RTCSessionDescription(privateCall.incomingOffer));
+    await pc.setRemoteDescription(new RTCSessionDescription(currentCall.incomingOffer));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     
     socket.emit('private-call-accept', {
-      targetUserId: privateCall.targetUser._id,
+      targetUserId: currentCall.targetUser._id,
       answer
     });
     
     setPrivateCall(prev => ({ ...prev, status: 'in-call', incomingOffer: null }));
-    processQueuedCandidates(privateCall.targetUser._id);
+    processQueuedCandidates(currentCall.targetUser._id);
   };
 
   const declinePrivateCall = () => {
-    if (privateCall.targetUser) {
-      socket.emit('private-call-decline', { targetUserId: privateCall.targetUser._id });
+    const currentCall = privateCallRef.current;
+    if (currentCall.targetUser) {
+      socket.emit('private-call-decline', { targetUserId: currentCall.targetUser._id });
     }
     cleanupPrivateCall();
   };
 
   const endPrivateCall = () => {
-    if (privateCall.targetUser) {
-      socket.emit('private-call-end', { targetUserId: privateCall.targetUser._id });
+    const currentCall = privateCallRef.current;
+    if (currentCall.targetUser) {
+      socket.emit('private-call-end', { targetUserId: currentCall.targetUser._id });
     }
     cleanupPrivateCall();
   };

@@ -287,42 +287,6 @@ const Friends = () => {
         )}
       </div>
 
-      {/* Call UI Overlays */}
-      {privateCall.status !== 'idle' && (
-        <div style={styles.callOverlay}>
-          <div style={styles.callCard}>
-            <div style={styles.callAvatar}>{privateCall.targetUser?.username[0].toUpperCase()}</div>
-            <h3>{privateCall.targetUser?.username}</h3>
-            <p>{privateCall.status === 'calling' ? 'Calling...' : privateCall.status === 'receiving' ? 'Incoming Call...' : 'In Call'}</p>
-            
-            {privateCall.status === 'in-call' && (
-               <div style={styles.remoteVideoContainer}>
-                  {remoteStreams[privateCall.targetUser?._id] ? (
-                    <video 
-                      autoPlay 
-                      ref={el => { if(el) el.srcObject = remoteStreams[privateCall.targetUser?._id] }} 
-                      style={styles.remoteVideo}
-                    />
-                  ) : (
-                    <div style={{ padding: '40px' }}>Audio Call Active</div>
-                  )}
-               </div>
-            )}
-
-            <div style={styles.callButtons}>
-              {privateCall.status === 'receiving' ? (
-                <>
-                  <button onClick={acceptPrivateCall} style={styles.acceptCallBtn}>Accept</button>
-                  <button onClick={declinePrivateCall} style={styles.declineCallBtn}>Decline</button>
-                </>
-              ) : (
-                <button onClick={endPrivateCall} style={styles.declineCallBtn}>End Call</button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modals */}
       {showSearchModal && (
         <div style={styles.modalOverlay}>
