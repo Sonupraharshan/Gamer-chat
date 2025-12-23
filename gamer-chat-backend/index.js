@@ -366,9 +366,10 @@ io.on('connection', (socket) => {
   // Signaling: Sending Offer
   socket.on('webrtc-offer', (data) => {
     const { targetId, offer, groupId } = data;
+    // Send to the target user's personal room (userId)
     io.to(targetId).emit('webrtc-offer', {
       offer,
-      senderId: socket.id,
+      senderId: socket.userId, // Use userId instead of socket.id for consistency
       senderUsername: socket.username,
       groupId
     });
@@ -379,7 +380,7 @@ io.on('connection', (socket) => {
     const { targetId, answer } = data;
     io.to(targetId).emit('webrtc-answer', {
       answer,
-      senderId: socket.id
+      senderId: socket.userId // Use userId instead of socket.id
     });
   });
 
@@ -388,7 +389,7 @@ io.on('connection', (socket) => {
     const { targetId, candidate } = data;
     io.to(targetId).emit('webrtc-ice-candidate', {
       candidate,
-      senderId: socket.id
+      senderId: socket.userId // Use userId instead of socket.id
     });
   });
 

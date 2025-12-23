@@ -34,6 +34,43 @@ export const VoiceProvider = ({ children }) => {
   const audioContextRef = useRef(null);
   const animationFrameRef = useRef(null);
   const audioChunks = useRef([]);
+
+  // Sound effect helper - simple beep tones
+  const playJoinSound = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880; // A5 note
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.2);
+    } catch (e) {
+      console.log('Could not play join sound');
+    }
+  };
+
+  const playLeaveSound = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 440; // A4 note (lower pitch for leave)
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {
+      console.log('Could not play leave sound');
+    }
+  };
   
   // Refs to avoid stale closures in socket handlers
   const localStreamRef = useRef(null);
@@ -91,6 +128,9 @@ export const VoiceProvider = ({ children }) => {
     setVoiceParticipants([{ _id: user.id || user._id, username: user.username }]);
     localStorage.setItem('lastVoiceGroupId', groupId);
     socket.emit('join-voice', { groupId });
+    
+    // Play join sound
+    playJoinSound();
   };
 
   const leaveVoice = () => {
@@ -121,6 +161,9 @@ export const VoiceProvider = ({ children }) => {
     setCurrentGroupId(null);
     currentGroupIdRef.current = null;
     localStorage.removeItem('lastVoiceGroupId');
+    
+    // Play leave sound
+    playLeaveSound();
   };
 
   // Screen Sharing
