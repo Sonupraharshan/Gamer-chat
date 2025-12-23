@@ -230,10 +230,39 @@ io.on('connection', (socket) => {
         username: socket.username,
         groupId
       });
+
+      // Also send the current voice channel users so they can see who's in voice
+      const voiceClients = io.sockets.adapter.rooms.get(`voice-${groupId}`);
+      const voiceUsers = [];
+      if (voiceClients) {
+        for (const clientId of voiceClients) {
+          const clientSocket = io.sockets.sockets.get(clientId);
+          if (clientSocket) {
+            voiceUsers.push({ _id: clientSocket.userId, username: clientSocket.username });
+          }
+        }
+      }
+      socket.emit('voice-channel-preview', { groupId, users: voiceUsers });
     } catch (error) {
       console.error('Join group error:', error);
       socket.emit('error', { message: 'Failed to join group' });
     }
+  });
+
+  // Get voice users for a group (without joining)
+  socket.on('get-voice-users', (data) => {
+    const { groupId } = data;
+    const voiceClients = io.sockets.adapter.rooms.get(`voice-${groupId}`);
+    const voiceUsers = [];
+    if (voiceClients) {
+      for (const clientId of voiceClients) {
+        const clientSocket = io.sockets.sockets.get(clientId);
+        if (clientSocket) {
+          voiceUsers.push({ _id: clientSocket.userId, username: clientSocket.username });
+        }
+      }
+    }
+    socket.emit('voice-channel-preview', { groupId, users: voiceUsers });
   });
 
   // Leave group room

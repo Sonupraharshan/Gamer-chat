@@ -15,7 +15,7 @@ function GroupChat({ group: initialGroup, onLeave, onUpdate }) {
     isInVoice, voiceParticipants, isMuted, isDeafened, joinVoice, leaveVoice, toggleMute, 
     remoteStreams, remoteCameraStreams, remoteScreenStreams, isSharingScreen, 
     startScreenShare, stopScreenShare, localScreenStream,
-    isCameraOn, toggleCamera, localStream
+    isCameraOn, toggleCamera, localStream, currentGroupId, voicePreview
   } = useContext(VoiceContext);
   const [group, setGroup] = useState(initialGroup);
   const [messages, setMessages] = useState([]);
@@ -298,22 +298,34 @@ function GroupChat({ group: initialGroup, onLeave, onUpdate }) {
             </div>
 
             <div style={styles.voiceParticipants}>
-              {voiceParticipants.map(participant => (
-                <div key={participant._id} style={styles.voiceUser}>
-                  <div style={styles.voiceAvatarSmall}>
-                    {participant.username[0].toUpperCase()}
-                    <div style={{
-                      ...styles.talkingIndicator,
-                      boxShadow: remoteStreams[participant._id] || (participant._id === (user.id || user._id) && !isMuted) ? '0 0 10px 2px var(--accent-secondary)' : 'none'
-                    }} />
+              {/* Show voicePreview if not in this group's voice, or voiceParticipants if we ARE in this group's voice */}
+              {(() => {
+                const isInThisGroupVoice = isInVoice && currentGroupId === group._id;
+                const usersToShow = isInThisGroupVoice 
+                  ? voiceParticipants 
+                  : (voicePreview[group._id] || []);
+                
+                if (usersToShow.length === 0) {
+                  return <div style={styles.emptyVoice}>No one in voice</div>;
+                }
+                
+                return usersToShow.map(participant => (
+                  <div key={participant._id} style={styles.voiceUser}>
+                    <div style={styles.voiceAvatarSmall}>
+                      {participant.username[0].toUpperCase()}
+                      <div style={{
+                        ...styles.talkingIndicator,
+                        boxShadow: isInThisGroupVoice && (remoteStreams[participant._id] || (participant._id === (user.id || user._id) && !isMuted)) ? '0 0 10px 2px var(--accent-secondary)' : 'none'
+                      }} />
+                    </div>
+                    <span style={styles.voiceUsernameSmall}>{participant.username}</span>
+                    <div style={styles.voiceStatusIcons}>
+                      {isInThisGroupVoice && isMuted && participant._id === (user.id || user._id) && <span style={styles.miniIcon}>🔇</span>}
+                      {isInThisGroupVoice && remoteCameraStreams[participant._id] && <span style={styles.miniIcon}>🎥</span>}
+                    </div>
                   </div>
-                  <span style={styles.voiceUsernameSmall}>{participant.username}</span>
-                  <div style={styles.voiceStatusIcons}>
-                    {isMuted && participant._id === (user.id || user._id) && <span style={styles.miniIcon}>🔇</span>}
-                    {remoteCameraStreams[participant._id] && <span style={styles.miniIcon}>🎥</span>}
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
 
@@ -866,6 +878,12 @@ const styles = {
   },
   miniIcon: {
     fontSize: '12px'
+  },
+  emptyVoice: {
+    fontSize: '12px',
+    color: 'var(--text-muted)',
+    padding: '8px 12px',
+    fontStyle: 'italic'
   },
   userPane: {
     position: 'absolute',

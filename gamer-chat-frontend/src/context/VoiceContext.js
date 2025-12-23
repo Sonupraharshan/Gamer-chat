@@ -26,6 +26,7 @@ export const VoiceProvider = ({ children }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [highlights, setHighlights] = useState([]);
   const [privateCall, setPrivateCall] = useState({ status: 'idle', targetUser: null, isVideo: false, incomingOffer: null });
+  const [voicePreview, setVoicePreview] = useState({}); // { groupId: [users] } - shows who's in voice WITHOUT joining
 
   const peerConnections = useRef({}); // { userId: RTCPeerConnection }
   const candidateQueues = useRef({}); // { userId: [RTCIceCandidate] }
@@ -497,6 +498,12 @@ export const VoiceProvider = ({ children }) => {
       setRemoteStreams(prev => { const n = { ...prev }; delete n[userId]; return n; });
     });
 
+    // Listen for voice preview (who's in voice for any group, without joining)
+    socket.on('voice-channel-preview', (data) => {
+      const { groupId, users } = data;
+      setVoicePreview(prev => ({ ...prev, [groupId]: users }));
+    });
+
     // --- Private Call Handlers ---
     socket.on('private-call-request', (data) => {
       const { fromUserId, fromUsername, offer, isVideo } = data;
@@ -688,7 +695,8 @@ export const VoiceProvider = ({ children }) => {
       initiatePrivateCall,
       acceptPrivateCall,
       declinePrivateCall,
-      endPrivateCall
+      endPrivateCall,
+      voicePreview // Who's in voice per group (without joining)
     }}>
       {children}
       {/* Recording Logic */}
