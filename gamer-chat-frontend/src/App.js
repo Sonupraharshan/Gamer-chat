@@ -14,6 +14,7 @@ import Home from './pages/Home';
 import LandingPage from './pages/LandingPage';
 import ActiveCallBar from './components/ActiveCallBar';
 import IncomingCallOverlay from './components/IncomingCallOverlay';
+import PrivateCallOverlay from './components/PrivateCallOverlay';
 
 
 // ✅ Wrapper for protected routes
@@ -48,6 +49,7 @@ function App() {
         </Routes>
         <ActiveCallBar />
         <IncomingCallOverlay />
+        <PrivateCallOverlay />
       </div>
     </Router>
   );
