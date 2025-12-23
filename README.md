@@ -407,21 +407,3 @@ Gamer-chat/
 4. Push to branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
----
-
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
----
-
-## 👨‍💻 Author
-
-**Sonu Praharshan**
-- GitHub: [@Sonupraharshan](https://github.com/Sonupraharshan)
-
----
-
-<p align="center">
-  Made with ❤️ for Gamers
-</p>
