@@ -77,6 +77,12 @@ export const VoiceProvider = ({ children }) => {
   const localStreamRef = useRef(null);
   const isInVoiceRef = useRef(false);
   const currentGroupIdRef = useRef(null);
+  const privateCallRef = useRef({ status: 'idle', targetUser: null, isVideo: false, incomingOffer: null });
+
+  // Sync privateCallRef whenever privateCall state changes
+  useEffect(() => {
+    privateCallRef.current = privateCall;
+  }, [privateCall]);
 
   // 1. Get User Media
   const startLocalStream = async (video = false) => {
@@ -541,8 +547,9 @@ export const VoiceProvider = ({ children }) => {
       
       // Guard: Don't process if we are the caller (we initiated this call)
       // This prevents the caller from hearing the ringtone
-      if (privateCall.status === 'calling') {
-        console.log('Ignoring private-call-request - we are the caller');
+      // Use ref to get current value and avoid stale closure
+      if (privateCallRef.current.status === 'calling' || privateCallRef.current.status === 'in-call') {
+        console.log('Ignoring private-call-request - we are already in a call');
         return;
       }
       
