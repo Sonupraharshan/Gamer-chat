@@ -92,6 +92,7 @@ export const VoiceProvider = ({ children }) => {
         video: video 
       });
       setLocalStream(stream);
+      localStreamRef.current = stream;
 
       // --- Setup Audio Analyser for Emotion Detection ---
       if (!audioContextRef.current) {
@@ -301,16 +302,20 @@ export const VoiceProvider = ({ children }) => {
     };
 
     pc.ontrack = (event) => {
-      const stream = event.streams[0];
       const track = event.track;
+      // Use the first stream provided, or create one if none exists (robustness)
+      const stream = event.streams && event.streams.length > 0 ? event.streams[0] : new MediaStream([track]);
       
-      console.log(`Received track: ${track.kind} from ${targetUserId}`);
+      console.log(`[WebRTC] Received ${track.kind} track from ${targetUserId}`);
 
       if (track.kind === 'audio') {
         setRemoteStreams(prev => ({ ...prev, [targetUserId]: stream }));
       } else if (track.kind === 'video') {
-        // Try to distinguish based on stream ID or track label (very basic)
-        const isScreen = stream.id.includes('screen') || track.label.toLowerCase().includes('screen');
+        // Distinguish between camera and screen share
+        const isScreen = stream.id.includes('screen') || 
+                         track.label.toLowerCase().includes('screen') || 
+                         track.label.toLowerCase().includes('window');
+        
         if (isScreen) {
           setRemoteScreenStreams(prev => ({ ...prev, [targetUserId]: stream }));
         } else {
@@ -600,6 +605,8 @@ export const VoiceProvider = ({ children }) => {
     if (!stream) return;
     
     setPrivateCall({ status: 'calling', targetUser, isVideo });
+    setIsCameraOn(isVideo);
+    localStreamRef.current = stream;
     
     const pc = createPeerConnection(targetUser._id, stream, true);
     peerConnections.current[targetUser._id] = pc;
@@ -619,6 +626,9 @@ export const VoiceProvider = ({ children }) => {
     
     const stream = await startLocalStream(privateCall.isVideo);
     if (!stream) return;
+
+    setIsCameraOn(privateCall.isVideo);
+    localStreamRef.current = stream;
     
     const pc = createPeerConnection(privateCall.targetUser._id, stream, true);
     peerConnections.current[privateCall.targetUser._id] = pc;
@@ -651,14 +661,18 @@ export const VoiceProvider = ({ children }) => {
   };
 
   const cleanupPrivateCall = () => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
       setLocalStream(null);
+      localStreamRef.current = null;
     }
     Object.values(peerConnections.current).forEach(pc => pc.close());
     peerConnections.current = {};
     candidateQueues.current = {};
     setRemoteStreams({});
+    setRemoteCameraStreams({});
+    setRemoteScreenStreams({});
+    setIsCameraOn(false);
     setPrivateCall({ status: 'idle', targetUser: null, isVideo: false, incomingOffer: null });
   };
 
