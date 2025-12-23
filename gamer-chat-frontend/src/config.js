@@ -8,4 +8,4 @@ const getEnv = (name, defaultValue) => {
   return defaultValue;
 };
 
-export const API_URL = getEnv('REACT_APP_API_URL', 'http://localhost:5000');
+export const API_URL = getEnv('REACT_APP_API_URL', 'https://gamer-chat-production.up.railway.app');
