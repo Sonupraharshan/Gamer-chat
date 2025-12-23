@@ -13,6 +13,7 @@ import Friends from './pages/Friends';
 import Home from './pages/Home';
 import LandingPage from './pages/LandingPage';
 import ActiveCallBar from './components/ActiveCallBar';
+import IncomingCallOverlay from './components/IncomingCallOverlay';
 
 
 // ✅ Wrapper for protected routes
@@ -46,6 +47,7 @@ function App() {
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         </Routes>
         <ActiveCallBar />
+        <IncomingCallOverlay />
       </div>
     </Router>
   );
