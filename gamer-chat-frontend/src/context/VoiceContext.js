@@ -569,11 +569,19 @@ export const VoiceProvider = ({ children }) => {
 
     socket.on('private-call-accepted', async (data) => {
       const { fromUserId, answer } = data;
+      console.log(`[WebRTC] Received call-accepted from ${fromUserId}`);
       const pc = peerConnections.current[fromUserId];
-      if (pc && pc.signalingState === "have-local-offer") {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        setPrivateCall(prev => ({ ...prev, status: 'in-call' }));
-        processQueuedCandidates(fromUserId);
+      if (pc && (pc.signalingState === "have-local-offer" || pc.signalingState === "stable")) {
+        try {
+          console.log(`[WebRTC] Setting remote description (answer)`);
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+          setPrivateCall(prev => ({ ...prev, status: 'in-call' }));
+          processQueuedCandidates(fromUserId);
+        } catch (err) {
+          console.error('[WebRTC] Error setting remote description (answer):', err);
+        }
+      } else {
+        console.warn(`[WebRTC] Ignoring call-accepted: PC exists? ${!!pc}, State: ${pc?.signalingState}`);
       }
     });
 
@@ -611,7 +619,9 @@ export const VoiceProvider = ({ children }) => {
     const pc = createPeerConnection(targetUser._id, stream, true);
     peerConnections.current[targetUser._id] = pc;
     
+    console.log(`[WebRTC] Creating offer for ${targetUser._id}. Video: ${isVideo}`);
     const offer = await pc.createOffer();
+    console.log(`[WebRTC] Set local description (offer)`);
     await pc.setLocalDescription(offer);
     
     socket.emit('private-call-start', {
@@ -634,8 +644,12 @@ export const VoiceProvider = ({ children }) => {
     const pc = createPeerConnection(currentCall.targetUser._id, stream, true);
     peerConnections.current[currentCall.targetUser._id] = pc;
     
+    console.log(`[WebRTC] Setting remote description (offer) for ${currentCall.targetUser._id}`);
     await pc.setRemoteDescription(new RTCSessionDescription(currentCall.incomingOffer));
+    
+    console.log(`[WebRTC] Creating answer`);
     const answer = await pc.createAnswer();
+    console.log(`[WebRTC] Set local description (answer)`);
     await pc.setLocalDescription(answer);
     
     socket.emit('private-call-accept', {
