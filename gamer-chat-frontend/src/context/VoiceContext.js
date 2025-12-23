@@ -504,9 +504,25 @@ export const VoiceProvider = ({ children }) => {
       setVoicePreview(prev => ({ ...prev, [groupId]: users }));
     });
 
-    // --- Private Call Handlers ---
+    return () => {
+      socket.off('user-joined-voice');
+      socket.off('voice-channel-users');
+      socket.off('voice-channel-preview');
+      socket.off('webrtc-offer');
+      socket.off('webrtc-answer');
+      socket.off('webrtc-ice-candidate');
+      socket.off('user-left-voice');
+    };
+  }, [socket, localStream, isInVoice]);
+
+  // --- SEPARATE useEffect for Private Call Handlers ---
+  // These need to be always active regardless of voice channel state
+  useEffect(() => {
+    if (!socket) return;
+
     socket.on('private-call-request', (data) => {
       const { fromUserId, fromUsername, offer, isVideo } = data;
+      console.log('📞 Incoming call from:', fromUsername);
       setPrivateCall({
         status: 'receiving',
         targetUser: { _id: fromUserId, username: fromUsername },
@@ -540,18 +556,13 @@ export const VoiceProvider = ({ children }) => {
     });
 
     return () => {
-      socket.off('user-joined-voice');
-      socket.off('webrtc-offer');
-      socket.off('webrtc-answer');
-      socket.off('webrtc-ice-candidate');
-      socket.off('user-left-voice');
       socket.off('private-call-request');
       socket.off('private-call-accepted');
       socket.off('private-call-declined');
       socket.off('private-call-ended');
       socket.off('private-call-ice-candidate');
     };
-  }, [socket, localStream, isInVoice]);
+  }, [socket]); // ONLY depends on socket, not localStream or isInVoice
 
   const initiatePrivateCall = async (targetUser, isVideo = false) => {
     const stream = await startLocalStream(isVideo); 
