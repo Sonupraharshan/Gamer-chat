@@ -34,6 +34,11 @@ export const VoiceProvider = ({ children }) => {
   const audioContextRef = useRef(null);
   const animationFrameRef = useRef(null);
   const audioChunks = useRef([]);
+  
+  // Refs to avoid stale closures in socket handlers
+  const localStreamRef = useRef(null);
+  const isInVoiceRef = useRef(false);
+  const currentGroupIdRef = useRef(null);
 
   // 1. Get User Media
   const startLocalStream = async (video = false) => {
@@ -76,6 +81,11 @@ export const VoiceProvider = ({ children }) => {
     const stream = await startLocalStream();
     if (!stream) return;
 
+    // Sync refs for socket handlers
+    localStreamRef.current = stream;
+    isInVoiceRef.current = true;
+    currentGroupIdRef.current = groupId;
+
     setCurrentGroupId(groupId);
     setIsInVoice(true);
     setVoiceParticipants([{ _id: user.id || user._id, username: user.username }]);
@@ -83,11 +93,11 @@ export const VoiceProvider = ({ children }) => {
     socket.emit('join-voice', { groupId });
   };
 
-  // 3. Leave Voice Channel
   const leaveVoice = () => {
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
       setLocalStream(null);
+      localStreamRef.current = null;
     }
     
     // Close all peer connections
@@ -106,8 +116,10 @@ export const VoiceProvider = ({ children }) => {
     }
 
     setIsInVoice(false);
+    isInVoiceRef.current = false;
     setVoiceParticipants([]);
     setCurrentGroupId(null);
+    currentGroupIdRef.current = null;
     localStorage.removeItem('lastVoiceGroupId');
   };
 
@@ -380,7 +392,8 @@ export const VoiceProvider = ({ children }) => {
     // A new user joined voice - we (as an existing user) send an offer
     socket.on('user-joined-voice', async (data) => {
       const { userId, username } = data;
-      if (!isInVoice || !localStream) return;
+      // Use refs to avoid stale closure issue
+      if (!isInVoiceRef.current || !localStreamRef.current) return;
       
       console.log(`User ${username} joined voice. Sending offer...`);
       
@@ -391,11 +404,11 @@ export const VoiceProvider = ({ children }) => {
         return prev;
       });
 
-      const pc = createPeerConnection(userId, localStream);
+      const pc = createPeerConnection(userId, localStreamRef.current);
       peerConnections.current[userId] = pc;
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      socket.emit('webrtc-offer', { targetId: userId, offer, groupId: currentGroupId });
+      socket.emit('webrtc-offer', { targetId: userId, offer, groupId: currentGroupIdRef.current });
     });
 
     socket.on('voice-channel-users', (data) => {
@@ -405,9 +418,10 @@ export const VoiceProvider = ({ children }) => {
 
     socket.on('webrtc-offer', async (data) => {
       const { offer, senderId, senderUsername } = data;
-      if (!isInVoice || !localStream) return;
+      // Use refs to avoid stale closure issue
+      if (!isInVoiceRef.current || !localStreamRef.current) return;
       
-      const pc = createPeerConnection(senderId, localStream);
+      const pc = createPeerConnection(senderId, localStreamRef.current);
       peerConnections.current[senderId] = pc;
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();

@@ -98,3 +98,59 @@
 .premium-btn:active {
   transform: scale(0.98);
 }
+
+/* ========= MOBILE RESPONSIVE ========= */
+@media (max-width: 768px) {
+  /* Show mobile menu button */
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+  
+  /* Hide left sidebar on mobile by default */
+  .voice-sidebar {
+    position: fixed;
+    left: -100%;
+    top: 0;
+    bottom: 0;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    width: 260px;
+  }
+  
+  .voice-sidebar.open {
+    left: 0;
+  }
+  
+  /* Hide right panel on mobile */
+  .right-video-panel,
+  .members-sidebar {
+    display: none;
+  }
+  
+  /* Adjust header for mobile */
+  .invite-btn {
+    display: none !important;
+  }
+  
+  /* Video panel goes fullscreen on mobile when active */
+  .video-panel-mobile {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small adjustments */
+  .glass-panel {
+    border-radius: 8px;
+  }
+  
+  .premium-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}

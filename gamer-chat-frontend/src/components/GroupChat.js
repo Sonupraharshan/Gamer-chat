@@ -25,6 +25,7 @@ function GroupChat({ group: initialGroup, onLeave, onUpdate }) {
   const [showInvite, setShowInvite] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [isFullScreenVideo, setIsFullScreenVideo] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // For mobile toggle
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -255,8 +256,11 @@ function GroupChat({ group: initialGroup, onLeave, onUpdate }) {
   return (
     <div style={styles.container} className="animate-in">
       <div style={styles.contentWrapper}>
-        {/* Left Voice Sidebar */}
-        <div style={styles.voiceSidebar} className="glass-panel">
+        {/* Left Voice Sidebar - toggle with sidebarOpen on mobile */}
+        <div 
+          style={{...styles.voiceSidebar, ...(sidebarOpen ? {} : {transform: 'translateX(-100%)'})}} 
+          className={`glass-panel voice-sidebar ${sidebarOpen ? 'open' : ''}`}
+        >
           <div style={styles.sidebarCategory}>
             <span style={styles.categoryLabel}>TEXT CHANNELS</span>
             <div style={styles.channelItemActive} className="glow-hover">
@@ -353,8 +357,23 @@ function GroupChat({ group: initialGroup, onLeave, onUpdate }) {
               />
             </div>
             <div style={styles.headerActions}>
+              {/* Mobile sidebar toggle */}
+              <button 
+                onClick={() => setSidebarOpen(!sidebarOpen)} 
+                style={styles.mobileMenuBtn}
+                title="Toggle Sidebar"
+              >
+                ☰
+              </button>
               <button onClick={() => setShowInvite(true)} style={styles.inviteBtn}>
                 Invite Members
+              </button>
+              <button 
+                onClick={() => setShowMembers(!showMembers)} 
+                style={styles.toggleMembersBtn}
+                title={showMembers ? "Hide Members" : "Show Members"}
+              >
+                👥
               </button>
             </div>
           </div>
@@ -592,6 +611,25 @@ const styles = {
     borderRadius: '4px',
     fontSize: '13px',
     fontWeight: '600',
+    cursor: 'pointer'
+  },
+  mobileMenuBtn: {
+    display: 'none', // Hidden on desktop, shown on mobile via media query
+    padding: '8px 12px',
+    backgroundColor: 'var(--bg-tertiary)',
+    color: '#fff',
+    border: '1px solid var(--glass-border)',
+    borderRadius: '6px',
+    fontSize: '18px',
+    cursor: 'pointer'
+  },
+  toggleMembersBtn: {
+    padding: '8px 12px',
+    backgroundColor: 'var(--bg-tertiary)',
+    color: '#fff',
+    border: '1px solid var(--glass-border)',
+    borderRadius: '6px',
+    fontSize: '16px',
     cursor: 'pointer'
   },
   rightVideoPanel: {
