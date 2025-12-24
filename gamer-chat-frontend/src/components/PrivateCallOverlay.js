@@ -30,9 +30,9 @@ const PrivateCallOverlay = () => {
   const dynamicStyles = {
     callContainer: {
       ...styles.callContainer,
-      width: isMobile ? '100%' : '90%',
-      height: isMobile ? '100vh' : '80vh',
-      maxWidth: isMobile ? '100%' : '900px',
+      width: isMobile ? '100vw' : '90%',
+      height: isMobile ? '100dvh' : '80vh',
+      maxWidth: isMobile ? '100vw' : '900px',
       borderRadius: isMobile ? 0 : '24px',
     },
     header: {
@@ -54,8 +54,9 @@ const PrivateCallOverlay = () => {
     },
     controls: {
       ...styles.controls,
-      padding: isMobile ? '12px' : '20px',
-      gap: isMobile ? '12px' : '20px',
+      padding: isMobile ? '16px' : '20px',
+      gap: isMobile ? '24px' : '20px',
+      bottom: isMobile ? '40px' : '30px', 
     },
     controlBtn: {
       ...styles.controlBtn,

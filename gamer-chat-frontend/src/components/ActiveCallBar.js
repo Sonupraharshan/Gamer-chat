@@ -62,9 +62,9 @@ const ActiveCallBar = () => {
         <button 
           onClick={leaveVoice} 
           style={styles.leaveBtn}
-          title="Leave Voice"
+          title="Disconnect from Voice"
         >
-          📞
+          ✖️
         </button>
       </div>
     </div>

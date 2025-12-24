@@ -8,6 +8,7 @@ const IncomingCallOverlay = () => {
   const oscillatorRef = useRef(null);
   const gainRef = useRef(null);
   const intervalRef = useRef(null);
+  const isComponentActive = useRef(false);
   const [ringtoneType, setRingtoneType] = useState(
     localStorage.getItem('ringtoneType') || 'classic'
   );
@@ -22,6 +23,8 @@ const IncomingCallOverlay = () => {
 
   const playRingtone = async () => {
     try {
+      if (!isComponentActive.current) return;
+
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
       }
@@ -32,13 +35,16 @@ const IncomingCallOverlay = () => {
       if (ctx.state === 'suspended') {
         await ctx.resume();
       }
+
+      // Check again after await
+      if (!isComponentActive.current) return;
       
       const pattern = ringtonePatterns[ringtoneType] || ringtonePatterns.classic;
       let patternIndex = 0;
       
       const playNote = () => {
-        // Don't play if context not running
-        if (ctx.state !== 'running') return;
+        // Don't play if context not running or component unmounted
+        if (!isComponentActive.current || ctx.state !== 'running') return;
         
         // Clean up previous oscillator
         if (oscillatorRef.current) {
@@ -74,7 +80,7 @@ const IncomingCallOverlay = () => {
       // Play immediately and then on interval
       playNote();
       intervalRef.current = setInterval(playNote, 
-        pattern.pattern.reduce((a, b) => a + b, 0) / pattern.pattern.length
+        pattern.pattern.reduce((a, b) => a + b, 0) / (pattern.pattern.length / 2 || 1) // Better interval calculation
       );
     } catch (e) {
       console.error('Ringtone play error:', e);
@@ -113,13 +119,18 @@ const IncomingCallOverlay = () => {
   }, []);
 
   useEffect(() => {
-    if (privateCall.status === 'receiving') {
+    isComponentActive.current = (privateCall.status === 'receiving');
+    
+    if (isComponentActive.current) {
       playRingtone();
     } else {
       stopRingtone();
     }
     
-    return () => stopRingtone();
+    return () => {
+      isComponentActive.current = false;
+      stopRingtone();
+    };
   }, [privateCall.status, ringtoneType]);
 
   // Save ringtone preference
