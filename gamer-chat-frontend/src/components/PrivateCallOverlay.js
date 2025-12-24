@@ -1,5 +1,5 @@
 // src/components/PrivateCallOverlay.js
-import React, { useContext, useRef, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { VoiceContext } from '../context/VoiceContext';
 
 const PrivateCallOverlay = () => {
@@ -19,85 +19,35 @@ const PrivateCallOverlay = () => {
 
   // Only show when in an active private call
   if (privateCall.status !== 'in-call' && privateCall.status !== 'calling') {
-    console.log('[PrivateCallOverlay] Not visible. Status:', privateCall.status);
     return null;
   }
   
-  console.log('[PrivateCallOverlay] Rendering. Status:', privateCall.status, 'Target:', privateCall.targetUser?.username);
-
   const isCalling = privateCall.status === 'calling';
   const targetId = privateCall.targetUser?._id;
   const remoteAudio = targetId ? remoteStreams[targetId] : null;
   const remoteVideo = targetId ? remoteCameraStreams[targetId] : null;
-  const hasRemoteVideo = !!remoteVideo;
-
-  // Dynamic styles based on mobile
-  const dynamicStyles = {
-    callContainer: {
-      ...styles.callContainer,
-      width: isMobile ? '100vw' : '90%',
-      height: isMobile ? '100dvh' : '80vh',
-      maxWidth: isMobile ? '100vw' : '900px',
-      borderRadius: isMobile ? 0 : '24px',
-    },
-    header: {
-      ...styles.header,
-      padding: isMobile ? '12px 16px' : '20px',
-      flexDirection: isMobile ? 'column' : 'row',
-      gap: isMobile ? '4px' : '0',
-    },
-    callerName: {
-      ...styles.callerName,
-      fontSize: isMobile ? '16px' : '20px',
-    },
-    localVideoContainer: {
-      ...styles.localVideoContainer,
-      width: isMobile ? '100px' : '180px',
-      height: isMobile ? '75px' : '120px',
-      bottom: isMobile ? '90px' : '20px',
-      right: isMobile ? '10px' : '20px',
-    },
-    controls: {
-      ...styles.controls,
-      padding: isMobile ? '16px' : '20px',
-      gap: isMobile ? '24px' : '20px',
-      bottom: isMobile ? '60px' : '30px', // Higher for mobile to avoid UI overlap
-      zIndex: 10000, // Absolute top
-    },
-    controlBtn: {
-      ...styles.controlBtn,
-      width: isMobile ? '50px' : '60px',
-      height: isMobile ? '50px' : '60px',
-      fontSize: isMobile ? '20px' : '24px',
-    },
-    endCallBtn: {
-      ...styles.endCallBtn,
-      width: isMobile ? '60px' : 'auto',
-      minWidth: isMobile ? '60px' : '150px',
-      height: isMobile ? '60px' : '60px',
-      borderRadius: isMobile ? '50%' : '30px',
-      padding: isMobile ? '0' : '0 25px',
-    },
-  };
 
   return (
     <div style={styles.overlay}>
-      <div style={dynamicStyles.callContainer} className="glass-panel">
-        {/* Call Header */}
-        <div style={dynamicStyles.header}>
-          <span style={dynamicStyles.callerName}>
-            {isCalling ? `Calling ${privateCall.targetUser?.username}...` : `In call with ${privateCall.targetUser?.username}`}
-          </span>
-          <span style={styles.callType}>
-            {privateCall.isVideo ? '📹 Video Call' : '📞 Voice Call'}
-          </span>
+      <div style={isMobile ? styles.containerMobile : styles.containerDesktop} className="glass-panel">
+        {/* Header (Top) */}
+        <div style={styles.header}>
+          <div style={styles.userInfo}>
+            <div style={styles.statusDot} />
+            <span style={styles.username}>
+              {isCalling ? `Calling ${privateCall.targetUser?.username}...` : privateCall.targetUser?.username}
+            </span>
+          </div>
+          <div style={styles.callLabel}>
+            {privateCall.isVideo ? '📹 Secure Video Call' : '📞 Secure Voice Call'}
+          </div>
         </div>
 
-        {/* Video Area */}
-        <div style={styles.videoArea}>
-          {/* Remote Video (Large) */}
-          <div style={styles.remoteVideoContainer}>
-            {hasRemoteVideo ? (
+        {/* Media Content (Middle) */}
+        <div style={styles.mediaArea}>
+          {/* Main Content (Remote Video or Avatar) */}
+          <div style={styles.mainFeed}>
+            {remoteVideo ? (
               <video 
                 ref={el => { if (el) el.srcObject = remoteVideo; }}
                 autoPlay
@@ -105,18 +55,21 @@ const PrivateCallOverlay = () => {
                 style={styles.remoteVideo}
               />
             ) : (
-              <div style={styles.avatarPlaceholder}>
-                <span style={styles.avatarChar}>
+              <div style={styles.avatarContainer}>
+                <div style={styles.avatar}>
                   {privateCall.targetUser?.username?.[0]?.toUpperCase() || '?'}
-                </span>
+                </div>
                 {isCalling && <div style={styles.callingPulse} />}
+                <div style={{ marginTop: '20px', color: '#fff', fontSize: '18px', fontWeight: '500' }}>
+                  {isCalling ? 'Establishing Connection...' : 'Voice Connected'}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Local Video (Small Picture-in-Picture) */}
+          {/* Local Feed (Picture-in-Picture) */}
           {privateCall.isVideo && localStream && (
-            <div style={dynamicStyles.localVideoContainer}>
+            <div style={isMobile ? styles.localFeedMobile : styles.localFeedDesktop}>
               <video 
                 ref={el => { if (el) el.srcObject = localStream; }}
                 autoPlay
@@ -124,42 +77,46 @@ const PrivateCallOverlay = () => {
                 muted
                 style={styles.localVideo}
               />
+              <div style={styles.localTag}>You</div>
             </div>
           )}
+        </div>
 
-          <div style={dynamicStyles.controls}>
+        {/* Controls (Bottom) */}
+        <div style={isMobile ? styles.controlsMobile : styles.controlsDesktop}>
+          <div style={styles.controlsGroup}>
             <button 
               onClick={(e) => { e.stopPropagation(); toggleMute(); }}
-              style={{...dynamicStyles.controlBtn, backgroundColor: isMuted ? '#f04747' : 'rgba(255,255,255,0.2)'}}
+              style={{...styles.controlBtn, backgroundColor: isMuted ? '#f04747' : 'rgba(255,255,255,0.1)'}}
               title={isMuted ? 'Unmute' : 'Mute'}
             >
-              {isMuted ? '🔇' : '🎙️'}
+              <span style={{ fontSize: '20px' }}>{isMuted ? '🔇' : '🎙️'}</span>
+              {!isMobile && <span style={styles.btnLabel}>{isMuted ? 'Unmute' : 'Mute'}</span>}
             </button>
             
             {privateCall.isVideo && (
               <button 
                 onClick={(e) => { e.stopPropagation(); toggleCamera(); }}
-                style={{...dynamicStyles.controlBtn, backgroundColor: isCameraOn ? '#43b581' : 'rgba(255,255,255,0.2)'}}
+                style={{...styles.controlBtn, backgroundColor: isCameraOn ? 'rgba(67, 181, 129, 0.2)' : 'rgba(255,255,255,0.1)'}}
                 title={isCameraOn ? 'Turn Off Camera' : 'Turn On Camera'}
               >
-                📹
+                <span style={{ fontSize: '20px' }}>📹</span>
+                {!isMobile && <span style={styles.btnLabel}>{isCameraOn ? 'Stop Video' : 'Start Video'}</span>}
               </button>
             )}
-            
-            <button 
-              onClick={(e) => { e.stopPropagation(); endPrivateCall(); }}
-              style={dynamicStyles.endCallBtn}
-              title="End Call"
-            >
-              <div style={styles.endCallContent}>
-                 <span style={{ fontSize: '24px', transform: 'rotate(135deg)', display: 'inline-block' }}>📞</span>
-                 {!isMobile && <span style={{ marginLeft: '8px', fontWeight: 'bold' }}>End Call</span>}
-              </div>
-            </button>
           </div>
+
+          <button 
+            onClick={(e) => { e.stopPropagation(); endPrivateCall(); }}
+            style={isMobile ? styles.endCallBtnMobile : styles.endCallBtnDesktop}
+            title="End Call"
+          >
+            <span style={{ fontSize: '24px', transform: 'rotate(135deg)', display: 'inline-block' }}>📞</span>
+            {!isMobile && <span style={{ marginLeft: '12px', fontWeight: '700', fontSize: '16px' }}>End Call</span>}
+          </button>
         </div>
 
-        {/* Hidden audio for remote */}
+        {/* Hidden Audio */}
         <audio ref={el => { if (el) el.srcObject = remoteAudio; }} autoPlay />
       </div>
     </div>
@@ -173,133 +130,212 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9999,
-    backdropFilter: 'blur(8px)'
-  },
-  callContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden'
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)'
-  },
-  callerName: {
-    fontWeight: '700',
-    color: '#fff'
-  },
-  callType: {
-    fontSize: '14px',
-    color: 'var(--text-muted)'
-  },
-  videoArea: {
-    flex: 1,
-    position: 'relative',
-    backgroundColor: '#000',
+    backgroundColor: '#0f0f0f',
+    zIndex: 10000,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center'
   },
-  remoteVideoContainer: {
+  containerDesktop: {
+    width: '100%',
+    height: '100dvh',
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: '#1a1a1a',
+    position: 'relative',
+    overflow: 'hidden'
+  },
+  containerMobile: {
+    width: '100%',
+    height: '100dvh',
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: '#000',
+    position: 'relative'
+  },
+  header: {
+    height: '60px',
+    padding: '0 24px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    zIndex: 10
+  },
+  userInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px'
+  },
+  statusDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    backgroundColor: '#43b581',
+    boxShadow: '0 0 8px #43b581'
+  },
+  username: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: '16px'
+  },
+  callLabel: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: '12px',
+    textTransform: 'uppercase',
+    letterSpacing: '1px'
+  },
+  mediaArea: {
+    flex: 1,
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000'
+  },
+  mainFeed: {
     width: '100%',
     height: '100%',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative'
+    justifyContent: 'center'
   },
   remoteVideo: {
     width: '100%',
     height: '100%',
-    objectFit: 'contain',
-    cursor: 'pointer'
+    objectFit: 'contain'
   },
-  avatarPlaceholder: {
+  avatarContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center'
+  },
+  avatar: {
     width: '120px',
     height: '120px',
     borderRadius: '50%',
-    backgroundColor: 'var(--accent-primary)',
+    backgroundColor: '#5865f2',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative'
-  },
-  avatarChar: {
     fontSize: '48px',
-    fontWeight: '700',
-    color: '#fff'
+    fontWeight: 'bold',
+    color: '#fff',
+    position: 'relative'
   },
   callingPulse: {
     position: 'absolute',
-    top: '-10px',
-    left: '-10px',
-    right: '-10px',
-    bottom: '-10px',
+    width: '140px',
+    height: '140px',
     borderRadius: '50%',
-    border: '3px solid var(--accent-secondary)',
-    animation: 'pulse 1.5s ease-in-out infinite'
+    border: '2px solid #5865f2',
+    animation: 'pulse 1.5s infinite'
   },
-  localVideoContainer: {
+  localFeedDesktop: {
     position: 'absolute',
+    top: '24px',
+    right: '24px',
+    width: '280px',
+    height: '160px',
     borderRadius: '12px',
     overflow: 'hidden',
-    border: '2px solid var(--glass-border)',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    border: '1px solid rgba(255,255,255,0.1)'
+  },
+  localFeedMobile: {
+    position: 'absolute',
+    top: '80px',
+    right: '16px',
+    width: '100px',
+    height: '150px',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+    border: '1px solid rgba(255,255,255,0.1)'
   },
   localVideo: {
     width: '100%',
     height: '100%',
     objectFit: 'cover'
   },
-  controls: {
+  localTag: {
     position: 'absolute',
-    bottom: '30px',
-    left: '50%',
-    transform: 'translateX(-50%)',
+    bottom: '8px',
+    left: '8px',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    color: '#fff',
+    fontSize: '10px',
+    padding: '2px 6px',
+    borderRadius: '4px'
+  },
+  controlsDesktop: {
+    height: '100px',
+    backgroundColor: 'rgba(0,0,0,0.9)',
     display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0 40px',
+    gap: '40px',
+    zIndex: 10
+  },
+  controlsMobile: {
+    height: '120px',
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: '20px',
-    padding: '12px 24px',
-    borderRadius: '40px',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    backdropFilter: 'blur(10px)',
-    zIndex: 10,
-    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-    border: '1px solid rgba(255,255,255,0.1)'
+    paddingBottom: '20px',
+    zIndex: 10
+  },
+  controlsGroup: {
+    display: 'flex',
+    gap: '16px'
   },
   controlBtn: {
-    borderRadius: '50%',
-    border: 'none',
-    cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: '10px',
+    height: '50px',
+    padding: '0 20px',
+    borderRadius: '8px',
+    border: '1px solid rgba(255,255,255,0.1)',
     color: '#fff',
-    transition: 'all 0.2s',
-    backgroundColor: 'rgba(255,255,255,0.2)'
+    cursor: 'pointer',
+    transition: 'all 0.2s'
   },
-  endCallBtn: {
+  btnLabel: {
+    fontWeight: '500',
+    fontSize: '14px'
+  },
+  endCallBtnDesktop: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#f04747',
-    border: 'none',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
     color: '#fff',
-    boxShadow: '0 4px 15px rgba(240, 71, 71, 0.4)',
-    transition: 'all 0.2s',
-    zIndex: 10001
+    border: 'none',
+    borderRadius: '8px',
+    height: '50px',
+    padding: '0 32px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(240, 71, 71, 0.4)',
+    transition: 'all 0.2s'
   },
-  endCallContent: {
+  endCallBtnMobile: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    backgroundColor: '#f04747',
+    color: '#fff',
+    border: 'none',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    cursor: 'pointer',
+    boxShadow: '0 4px 16px rgba(240, 71, 71, 0.4)'
   }
 };
 

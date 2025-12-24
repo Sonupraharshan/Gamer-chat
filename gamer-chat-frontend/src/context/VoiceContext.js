@@ -600,9 +600,11 @@ export const VoiceProvider = ({ children }) => {
         return;
       }
 
-      // Guard: Don't process if it's OUR OWN call request (happens if calling yourself)
-      if (fromUserId === user._id || fromUserId === user.id) {
-        console.log('[WebRTC] Ignoring self-call request');
+      // Guard: Don't process if it's OUR OWN call request (happens if calling yourself 
+      // or if using the same account in multiple tabs/sessions)
+      const currentUserId = user?.id || user?._id;
+      if (fromUserId === currentUserId) {
+        console.log('[WebRTC] Ignoring self-call signaling');
         return;
       }
       
