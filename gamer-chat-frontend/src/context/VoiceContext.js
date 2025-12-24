@@ -599,6 +599,12 @@ export const VoiceProvider = ({ children }) => {
         console.log('Ignoring private-call-request - we are already in a call');
         return;
       }
+
+      // Guard: Don't process if it's OUR OWN call request (happens if calling yourself)
+      if (fromUserId === user._id || fromUserId === user.id) {
+        console.log('[WebRTC] Ignoring self-call request');
+        return;
+      }
       
       console.log('📞 Incoming call from:', fromUsername);
       setPrivateCall({

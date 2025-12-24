@@ -72,9 +72,11 @@ const PrivateCallOverlay = () => {
     },
     endCallBtn: {
       ...styles.endCallBtn,
-      width: isMobile ? '50px' : '60px',
-      height: isMobile ? '50px' : '60px',
-      fontSize: isMobile ? '20px' : '24px',
+      width: isMobile ? '60px' : 'auto',
+      minWidth: isMobile ? '60px' : '150px',
+      height: isMobile ? '60px' : '60px',
+      borderRadius: isMobile ? '50%' : '30px',
+      padding: isMobile ? '0' : '0 25px',
     },
   };
 
@@ -125,7 +127,6 @@ const PrivateCallOverlay = () => {
             </div>
           )}
 
-          {/* WhatsApp-Style Floating Controls */}
           <div style={dynamicStyles.controls}>
             <button 
               onClick={(e) => { e.stopPropagation(); toggleMute(); }}
@@ -147,10 +148,13 @@ const PrivateCallOverlay = () => {
             
             <button 
               onClick={(e) => { e.stopPropagation(); endPrivateCall(); }}
-              style={{...dynamicStyles.endCallBtn, backgroundColor: '#f04747'}}
+              style={dynamicStyles.endCallBtn}
               title="End Call"
             >
-              ✖️
+              <div style={styles.endCallContent}>
+                 <span style={{ fontSize: '24px', transform: 'rotate(135deg)', display: 'inline-block' }}>📞</span>
+                 {!isMobile && <span style={{ marginLeft: '8px', fontWeight: 'bold' }}>End Call</span>}
+              </div>
             </button>
           </div>
         </div>
@@ -281,16 +285,21 @@ const styles = {
     backgroundColor: 'rgba(255,255,255,0.2)'
   },
   endCallBtn: {
-    borderRadius: '50%',
-    border: 'none',
     backgroundColor: '#f04747',
+    border: 'none',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     color: '#fff',
-    boxShadow: '0 0 20px rgba(240, 71, 71, 0.4)',
-    transition: 'all 0.2s'
+    boxShadow: '0 4px 15px rgba(240, 71, 71, 0.4)',
+    transition: 'all 0.2s',
+    zIndex: 10001
+  },
+  endCallContent: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 };
 

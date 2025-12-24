@@ -77,9 +77,12 @@ const IncomingCallOverlay = () => {
       try { oscillatorRef.current.stop(); } catch (e) {}
       oscillatorRef.current = null;
     }
-    // Forcefully suspend context to kill all sounds
-    if (audioContextRef.current && audioContextRef.current.state === 'running') {
-      audioContextRef.current.suspend();
+    // Forcefully close context to kill all sounds forever
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      } catch (e) {}
     }
   };
 
