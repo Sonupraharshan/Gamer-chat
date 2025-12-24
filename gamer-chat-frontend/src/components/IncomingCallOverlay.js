@@ -24,64 +24,45 @@ const IncomingCallOverlay = () => {
   const playRingtone = async () => {
     try {
       if (!isComponentActive.current) return;
+      stopRingtone(); // Clear any existing
 
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
       }
       
       const ctx = audioContextRef.current;
-      
-      // Resume context if suspended (browser autoplay policy)
-      if (ctx.state === 'suspended') {
-        await ctx.resume();
-      }
-
-      // Check again after await
+      if (ctx.state === 'suspended') await ctx.resume();
       if (!isComponentActive.current) return;
       
       const pattern = ringtonePatterns[ringtoneType] || ringtonePatterns.classic;
       let patternIndex = 0;
       
-      const playNote = () => {
-        // Don't play if context not running or component unmounted
-        if (!isComponentActive.current || ctx.state !== 'running') return;
-        
-        // Clean up previous oscillator
-        if (oscillatorRef.current) {
-          try { oscillatorRef.current.stop(); } catch (e) {}
-        }
-        
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        osc.type = 'sine';
-        osc.frequency.value = pattern.freq;
+      const playNextStep = () => {
+        if (!isComponentActive.current || !ctx || ctx.state !== 'running') return;
         
         const duration = pattern.pattern[patternIndex] / 1000;
         const isNote = patternIndex % 2 === 0;
         
-        gain.gain.setValueAtTime(isNote ? 0.3 : 0, ctx.currentTime);
         if (isNote) {
+          if (oscillatorRef.current) try { oscillatorRef.current.stop(); } catch(e){}
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.value = pattern.freq;
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
           gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + duration);
+          oscillatorRef.current = osc;
         }
         
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + duration);
-        
-        oscillatorRef.current = osc;
-        gainRef.current = gain;
-        
         patternIndex = (patternIndex + 1) % pattern.pattern.length;
+        intervalRef.current = setTimeout(playNextStep, duration * 1000);
       };
       
-      // Play immediately and then on interval
-      playNote();
-      intervalRef.current = setInterval(playNote, 
-        pattern.pattern.reduce((a, b) => a + b, 0) / (pattern.pattern.length / 2 || 1) // Better interval calculation
-      );
+      playNextStep();
     } catch (e) {
       console.error('Ringtone play error:', e);
     }
@@ -89,12 +70,16 @@ const IncomingCallOverlay = () => {
 
   const stopRingtone = () => {
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearTimeout(intervalRef.current);
       intervalRef.current = null;
     }
     if (oscillatorRef.current) {
       try { oscillatorRef.current.stop(); } catch (e) {}
       oscillatorRef.current = null;
+    }
+    // Forcefully suspend context to kill all sounds
+    if (audioContextRef.current && audioContextRef.current.state === 'running') {
+      audioContextRef.current.suspend();
     }
   };
 

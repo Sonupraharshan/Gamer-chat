@@ -18,7 +18,12 @@ const PrivateCallOverlay = () => {
   }, []);
 
   // Only show when in an active private call
-  if (privateCall.status !== 'in-call' && privateCall.status !== 'calling') return null;
+  if (privateCall.status !== 'in-call' && privateCall.status !== 'calling') {
+    console.log('[PrivateCallOverlay] Not visible. Status:', privateCall.status);
+    return null;
+  }
+  
+  console.log('[PrivateCallOverlay] Rendering. Status:', privateCall.status, 'Target:', privateCall.targetUser?.username);
 
   const isCalling = privateCall.status === 'calling';
   const targetId = privateCall.targetUser?._id;
@@ -56,7 +61,8 @@ const PrivateCallOverlay = () => {
       ...styles.controls,
       padding: isMobile ? '16px' : '20px',
       gap: isMobile ? '24px' : '20px',
-      bottom: isMobile ? '40px' : '30px', 
+      bottom: isMobile ? '60px' : '30px', // Higher for mobile to avoid UI overlap
+      zIndex: 10000, // Absolute top
     },
     controlBtn: {
       ...styles.controlBtn,
@@ -122,7 +128,7 @@ const PrivateCallOverlay = () => {
           {/* WhatsApp-Style Floating Controls */}
           <div style={dynamicStyles.controls}>
             <button 
-              onClick={toggleMute}
+              onClick={(e) => { e.stopPropagation(); toggleMute(); }}
               style={{...dynamicStyles.controlBtn, backgroundColor: isMuted ? '#f04747' : 'rgba(255,255,255,0.2)'}}
               title={isMuted ? 'Unmute' : 'Mute'}
             >
@@ -131,7 +137,7 @@ const PrivateCallOverlay = () => {
             
             {privateCall.isVideo && (
               <button 
-                onClick={toggleCamera}
+                onClick={(e) => { e.stopPropagation(); toggleCamera(); }}
                 style={{...dynamicStyles.controlBtn, backgroundColor: isCameraOn ? '#43b581' : 'rgba(255,255,255,0.2)'}}
                 title={isCameraOn ? 'Turn Off Camera' : 'Turn On Camera'}
               >
@@ -140,11 +146,11 @@ const PrivateCallOverlay = () => {
             )}
             
             <button 
-              onClick={endPrivateCall}
-              style={dynamicStyles.endCallBtn}
+              onClick={(e) => { e.stopPropagation(); endPrivateCall(); }}
+              style={{...dynamicStyles.endCallBtn, backgroundColor: '#f04747'}}
               title="End Call"
             >
-              📞
+              ✖️
             </button>
           </div>
         </div>
@@ -283,7 +289,6 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     color: '#fff',
-    transform: 'rotate(135deg)',
     boxShadow: '0 0 20px rgba(240, 71, 71, 0.4)',
     transition: 'all 0.2s'
   }
