@@ -78,11 +78,24 @@ export const VoiceProvider = ({ children }) => {
   const isInVoiceRef = useRef(false);
   const currentGroupIdRef = useRef(null);
   const privateCallRef = useRef({ status: 'idle', targetUser: null, isVideo: false, incomingOffer: null });
+  const [iceServers, setIceServers] = useState([
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+  ]);
+  const iceServersRef = useRef(iceServers);
 
   // Sync privateCallRef whenever privateCall state changes
   useEffect(() => {
     privateCallRef.current = privateCall;
   }, [privateCall]);
+
+  // Sync iceServersRef whenever iceServers state changes
+  useEffect(() => {
+    iceServersRef.current = iceServers;
+  }, [iceServers]);
 
   // 1. Get User Media
   const startLocalStream = async (video = false) => {
@@ -284,7 +297,7 @@ export const VoiceProvider = ({ children }) => {
   // 4. Create Peer Connection
   const createPeerConnection = (targetUserId, stream, isPrivate = false) => {
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      iceServers: iceServersRef.current
     });
 
     pc.onicecandidate = (event) => {
@@ -559,6 +572,17 @@ export const VoiceProvider = ({ children }) => {
       socket.off('user-left-voice');
     };
   }, [socket, localStream, isInVoice]);
+
+  useEffect(() => {
+    if (socket && connected) {
+      socket.emit('get-ice-servers');
+      socket.on('ice-servers', (data) => {
+        console.log('[WebRTC] Received ICE servers from backend:', data.iceServers.length);
+        setIceServers(data.iceServers);
+      });
+      return () => socket.off('ice-servers');
+    }
+  }, [socket, connected]);
 
   // --- SEPARATE useEffect for Private Call Handlers ---
   // These need to be always active regardless of voice channel state

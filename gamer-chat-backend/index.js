@@ -110,6 +110,37 @@ io.on('connection', (socket) => {
   // Join personal room for 1:1 signaling
   socket.join(socket.userId);
 
+  // Provide ICE servers (STUN/TURN) to the client
+  socket.on('get-ice-servers', () => {
+    const iceServers = [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      { urls: 'stun:stun.ekiga.net' },
+      { urls: 'stun:stun.ideasip.com' },
+      { urls: 'stun:stun.schlund.de' },
+      { urls: 'stun:stun.voiparound.com' },
+      { urls: 'stun:stun.voipbuster.com' },
+      { urls: 'stun:stun.voipstunt.com' },
+      { urls: 'stun:stun.voxgratia.org' }
+    ];
+
+    // Add TURN server if configured in .env
+    if (process.env.TURN_SERVER_URL) {
+      iceServers.push({
+        urls: process.env.TURN_SERVER_URL,
+        username: process.env.TURN_SERVER_USERNAME,
+        credential: process.env.TURN_SERVER_PASSWORD
+      });
+    } else {
+      console.warn('⚠️ [WebRTC] No TURN_SERVER_URL found in .env. Cross-network calls may fail.');
+    }
+
+    socket.emit('ice-servers', { iceServers });
+  });
+
   // Broadcast online status to friends
   const updateStatus = async (status) => {
     try {
