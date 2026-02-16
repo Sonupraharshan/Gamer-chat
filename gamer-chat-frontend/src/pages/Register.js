@@ -159,7 +159,7 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'radial-gradient(circle at 70% 70%, rgba(0, 255, 136, 0.15) 0%, transparent 50%)',
+    background: 'radial-gradient(circle at 50% 70%, rgba(255, 255, 255, 0.03) 0%, transparent 60%)',
     pointerEvents: 'none'
   },
   floatingOrb1: {
@@ -214,7 +214,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     margin: '0 auto 24px',
-    boxShadow: '0 0 30px rgba(0, 255, 136, 0.3)'
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
   },
   icon: {
     fontSize: '40px'
@@ -263,12 +263,12 @@ const styles = {
     fontWeight: '700',
     borderRadius: '12px',
     border: 'none',
-    background: 'linear-gradient(135deg, var(--accent-secondary), #00cc6a)',
+    background: 'var(--accent-secondary)',
     color: '#000',
     cursor: 'pointer',
     marginTop: '8px',
     transition: 'all 0.3s',
-    boxShadow: '0 0 30px rgba(0, 255, 136, 0.3)'
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)'
   },
   divider: {
     display: 'flex',

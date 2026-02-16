@@ -78,7 +78,7 @@ const styles = {
     left: 0,
     width: '340px', // Matches your left panel width roughly
     height: '52px',
-    backgroundColor: '#232428',
+    backgroundColor: 'var(--bg-secondary)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',

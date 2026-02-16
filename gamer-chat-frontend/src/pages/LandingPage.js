@@ -180,7 +180,7 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'radial-gradient(circle at 20% 50%, rgba(125, 95, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(0, 255, 136, 0.1) 0%, transparent 50%)',
+    background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 70%)',
     pointerEvents: 'none'
   },
   floatingOrbs: {
@@ -442,7 +442,7 @@ const styles = {
     borderRadius: '12px',
     fontWeight: '700',
     fontSize: '18px',
-    boxShadow: '0 0 30px rgba(0, 255, 136, 0.3)',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
     transition: 'all 0.3s'
   },
   footer: {

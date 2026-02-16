@@ -1,27 +1,28 @@
 /* src/designSystem.css */
 
 :root {
-  /* Core Palette - Vibrant Gamer Theme */
-  --bg-primary: #0a0b0d;
-  --bg-secondary: #16171d;
-  --bg-tertiary: #1e1f26;
+  /* Core Palette - Ash / Minimalist Dark Theme */
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --bg-tertiary: #252525;
   
-  --accent-primary: #7d5fff; /* Cyber Purple */
-  --accent-secondary: #00ff88; /* Neon Green */
-  --accent-tertiary: #ff3e81; /* Hot Pink */
+  /* Ash / Slate Accents */
+  --accent-primary: #546e7a; /* Slate Grey */
+  --accent-secondary: #78909c; /* Lighter Slate */
+  --accent-tertiary: #37474f; /* Darker Slate */
   
-  --text-main: #f0f1f5;
-  --text-muted: #949ba4;
+  --text-main: #eceff1;
+  --text-muted: #b0bec5;
   --text-vibrant: #ffffff;
   
-  --glass-bg: rgba(30, 31, 38, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(30, 30, 30, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
   
-  --shadow-neon: 0 0 15px rgba(125, 95, 255, 0.3);
+  --shadow-neon: 0 4px 20px rgba(0, 0, 0, 0.4); /* Substituted with soft shadow */
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Glassmorphism Utility */
+/* Glassmorphism Utility - Subtle & Clean */
 .glass-panel {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
@@ -46,7 +47,7 @@
   animation: fadeInSlideUp 0.4s ease-out forwards;
 }
 
-/* Custom Scrollbar for a cleaner look */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -64,14 +65,15 @@
   background: var(--accent-primary);
 }
 
-/* Glow effects */
+/* Removed Glow effects, kept utilities for compatibility but made subtle */
 .glow-text {
-  text-shadow: 0 0 10px rgba(125, 95, 255, 0.5);
+  text-shadow: none;
+  font-weight: 500;
 }
 
 .glow-hover:hover {
   box-shadow: var(--shadow-neon);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 /* Button Reset & Base */
@@ -91,7 +93,7 @@
 }
 
 .premium-btn:hover {
-  filter: brightness(1.1);
+  background: var(--accent-secondary);
   box-shadow: var(--shadow-neon);
 }
 
@@ -99,39 +101,31 @@
   transform: scale(0.98);
 }
 
-/* Floating Animation for Orbs */
+/* Floating Animation - Subtle */
 @keyframes float {
   0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(30px, -30px) scale(1.1);
+    transform: translate(0, 0);
   }
   50% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-  75% {
-    transform: translate(15px, 15px) scale(1.05);
+    transform: translate(0, -6px);
   }
 }
 
-/* Gradient Text Utility */
+/* Gradient Text - Converted to Solid for cleanliness */
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  background: none;
+  -webkit-background-clip: border-box;
+  -webkit-text-fill-color: initial;
+  color: var(--text-vibrant);
 }
 
 /* Pulse Animation */
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
-    transform: scale(1);
   }
   50% {
-    opacity: 0.8;
-    transform: scale(1.02);
+    opacity: 0.7;
   }
 }
 

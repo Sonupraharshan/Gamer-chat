@@ -182,25 +182,25 @@ const styles = {
     width: '120px',
     height: '120px',
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, #5865f2, #7d5fff)',
+    background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     margin: '0 auto 24px',
     animation: 'pulse 2s infinite',
-    boxShadow: '0 0 30px rgba(88, 101, 242, 0.4)'
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
   },
   avatar: {
     width: '100px',
     height: '100px',
     borderRadius: '50%',
-    backgroundColor: '#111',
+    backgroundColor: 'var(--bg-primary)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '48px',
     fontWeight: 'bold',
-    color: '#fff'
+    color: 'var(--text-main)'
   },
   callerName: {
     fontSize: '28px',

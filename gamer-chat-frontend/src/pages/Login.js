@@ -131,7 +131,7 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'radial-gradient(circle at 30% 30%, rgba(125, 95, 255, 0.2) 0%, transparent 50%)',
+    background: 'radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.03) 0%, transparent 60%)',
     pointerEvents: 'none'
   },
   floatingOrb1: {
@@ -235,7 +235,7 @@ const styles = {
     fontWeight: '700',
     borderRadius: '12px',
     border: 'none',
-    background: 'linear-gradient(135deg, var(--accent-primary), #9f7afa)',
+    background: 'var(--accent-primary)',
     color: '#fff',
     cursor: 'pointer',
     marginTop: '8px',
